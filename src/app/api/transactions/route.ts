@@ -60,7 +60,18 @@ async function handlePOST(request: AuthenticatedRequest) {
 
     const transaction = await TransactionService.create(user.userId, body)
 
-    return NextResponse.json<ApiResponse<Transaction>>({
+    if (!transaction) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create transaction'
+        },
+        timestamp: new Date().toISOString()
+      }, { status: 500 })
+    }
+
+    return NextResponse.json<ApiResponse<typeof transaction>>({
       success: true,
       data: transaction,
       timestamp: new Date().toISOString()

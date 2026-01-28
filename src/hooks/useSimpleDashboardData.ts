@@ -1,6 +1,22 @@
 import { useState, useEffect } from 'react'
 import { getDashboardData } from '@/lib/actions/dashboard-actions'
 
+interface RecentTransaction {
+  id: string
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER'
+  amount: number
+  currency: string
+  description: string
+  date: string
+  category?: {
+    name: string
+    icon: string
+  }
+  account?: {
+    name: string
+  }
+}
+
 export function useSimpleDashboardData() {
   const [dashboardData, setDashboardData] = useState({
     netWorth: 0,
@@ -14,9 +30,9 @@ export function useSimpleDashboardData() {
     completedGoals: 0
   })
   
-  const [recentTransactions, setRecentTransactions] = useState([])
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
 
   const loadData = async () => {
     try {

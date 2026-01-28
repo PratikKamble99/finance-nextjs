@@ -91,7 +91,18 @@ async function handlePUT(request: AuthenticatedRequest, { params }: { params: Pr
     const body = await request.json()
     const transaction = await TransactionService.update(id, body)
 
-    return NextResponse.json<ApiResponse<Transaction>>({
+    if (!transaction) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: {
+          code: 'RESOURCE_NOT_FOUND',
+          message: 'Transaction not found after update'
+        },
+        timestamp: new Date().toISOString()
+      }, { status: 404 })
+    }
+
+    return NextResponse.json<ApiResponse<typeof transaction>>({
       success: true,
       data: transaction,
       timestamp: new Date().toISOString()

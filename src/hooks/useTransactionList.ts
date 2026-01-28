@@ -1,10 +1,28 @@
 import { useState, useEffect } from 'react'
 import { getTransactions } from '@/lib/actions/transaction-actions'
 
+interface Transaction {
+  id: string
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER'
+  amount: number
+  currency: string
+  description: string
+  date: string
+  merchant?: string
+  paymentMode?: string
+  category?: {
+    name: string
+    icon: string
+  }
+  account?: {
+    name: string
+  }
+}
+
 export function useTransactionList() {
-  const [transactions, setTransactions] = useState([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)

@@ -39,7 +39,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          {/* <ServiceWorkerRegistration /> */}
+          <ServiceWorkerRegistration />
           <OfflineIndicator />
           <PWAInstallBanner />
           {children}

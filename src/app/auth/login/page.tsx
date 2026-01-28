@@ -155,7 +155,7 @@ export default function LoginPage() {
                   Create secure account
                 </Link>
               </p>
-              <Link href="/forgot-password" class="block text-xs text-slate-600 hover:text-slate-400 transition-colors">
+              <Link href="/forgot-password" className="block text-xs text-slate-600 hover:text-slate-400 transition-colors">
                 Forgot your password?
               </Link>
             </div>

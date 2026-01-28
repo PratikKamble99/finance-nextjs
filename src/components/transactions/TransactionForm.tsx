@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, DollarSign, Calendar, FileText, Tag, CreditCard, Store } from 'lucide-react'
-import { useTransactionForm } from '@/hooks/useTransactionForm'
+import { useSimpleTransactionForm } from '@/hooks/useSimpleTransactionForm'
 import { createTransaction } from '@/lib/actions/transaction-actions'
 
 interface TransactionFormProps {
@@ -27,11 +27,11 @@ export default function TransactionForm({
   const {
     categories,
     accounts,
-    isLoadingData,
+    isLoadingAccounts,
     isLoadingCategories,
     error: formError,
     loadCategories
-  } = useTransactionForm()
+  } = useSimpleTransactionForm()
 
   const [formData, setFormData] = useState<CreateTransactionRequest>({
     type: 'EXPENSE',
@@ -56,7 +56,9 @@ export default function TransactionForm({
 
   // Load categories when transaction type changes
   useEffect(() => {
-    loadCategories(formData.type)
+    if (formData.type === 'INCOME' || formData.type === 'EXPENSE') {
+      loadCategories(formData.type)
+    }
   }, [formData.type, loadCategories])
 
   // Set form error from hook
@@ -180,7 +182,7 @@ export default function TransactionForm({
     }
   }
 
-  if (isLoadingData) {
+  if (isLoadingAccounts) {
     return (
       <div className="flex justify-center items-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

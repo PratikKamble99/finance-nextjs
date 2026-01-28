@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse } from '@/types'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Create response
     const response = NextResponse.json<ApiResponse>({
       success: true,
-      message: 'Logged out successfully',
+      data: { message: 'Logged out successfully' },
       timestamp: new Date().toISOString()
     })
 

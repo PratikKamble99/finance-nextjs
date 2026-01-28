@@ -77,16 +77,6 @@ jest.mock('@/lib/services/transaction.service', () => ({
   }
 }))
 
-jest.mock('@/lib/services/goal.service', () => ({
-  GoalService: {
-    getGoalsSummary: jest.fn().mockResolvedValue({
-      overallProgress: 75,
-      totalGoals: 4,
-      completedGoals: 3
-    })
-  }
-}))
-
 // Mock Prisma for categories
 jest.mock('@/lib/db', () => ({
   prisma: {
@@ -113,9 +103,9 @@ describe('Integration Tests', () => {
         monthlyIncome: 5000,
         monthlyExpenses: 3000,
         netAmount: 2000,
-        goalsProgress: 75,
-        totalGoals: 4,
-        completedGoals: 3
+        goalsProgress: 0, // Goals service removed - using placeholder data
+        totalGoals: 0,
+        completedGoals: 0
       })
       expect(result.data?.recentTransactions).toHaveLength(1)
       expect(result.data?.recentTransactions[0]).toEqual({
