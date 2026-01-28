@@ -1,0 +1,55 @@
+import { useState, useEffect } from 'react'
+import { getTransactions } from '@/lib/actions/transaction-actions'
+
+export function useTransactionList() {
+  const [transactions, setTransactions] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+
+  const loadTransactions = async (page = 1) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const result = await getTransactions({
+        page,
+        limit: 10
+      })
+
+      if (result.success && result.data) {
+        setTransactions(result.data.transactions || [])
+        setTotalCount(result.data.totalCount || 0)
+        setCurrentPage(page)
+        setTotalPages(Math.ceil((result.data.totalCount || 0) / 10))
+      } else {
+        setError(result.error || 'Failed to load transactions')
+        setTransactions([])
+      }
+    } catch (error) {
+      console.error('Transaction list error:', error)
+      setError('Failed to load transactions')
+      setTransactions([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Load transactions once on mount
+  useEffect(() => {
+    loadTransactions(1)
+  }, [])
+
+  return {
+    transactions,
+    isLoading,
+    error,
+    totalCount,
+    currentPage,
+    totalPages,
+    loadTransactions,
+    refreshTransactions: () => loadTransactions(currentPage)
+  }
+}
