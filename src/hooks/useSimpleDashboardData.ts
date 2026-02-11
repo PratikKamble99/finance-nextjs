@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getDashboardData } from '@/lib/actions/dashboard-actions'
 
 interface RecentTransaction {
@@ -34,7 +34,7 @@ export function useSimpleDashboardData() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -53,12 +53,12 @@ export function useSimpleDashboardData() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   // Load data once on mount
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   return {
     dashboardData,

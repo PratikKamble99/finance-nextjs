@@ -9,20 +9,22 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, DollarSign, Calendar, FileText, Tag, CreditCard, Store } from 'lucide-react'
 import { useSimpleTransactionForm } from '@/hooks/useSimpleTransactionForm'
-import { createTransaction } from '@/lib/actions/transaction-actions'
+import { createTransaction, updateTransaction } from '@/lib/actions/transaction-actions'
 
 interface TransactionFormProps {
   onSubmit: (success: boolean, message?: string) => void
   onCancel: () => void
-  initialData?: Partial<CreateTransactionRequest>
+  initialData?: Partial<CreateTransactionRequest> & { id?: string }
   isLoading?: boolean
+  isEditing?: boolean
 }
 
 export default function TransactionForm({ 
   onSubmit, 
   onCancel, 
   initialData, 
-  isLoading: externalLoading = false 
+  isLoading: externalLoading = false,
+  isEditing = false
 }: TransactionFormProps) {
   const {
     categories,
@@ -139,12 +141,17 @@ export default function TransactionForm({
       // TODO: Handle receipt upload
       // For now, we'll skip receipt upload functionality
 
-      const result = await createTransaction(formDataToSubmit)
+      let result
+      if (isEditing && initialData?.id) {
+        result = await updateTransaction(initialData.id, formDataToSubmit)
+      } else {
+        result = await createTransaction(formDataToSubmit)
+      }
       
       if (result.success) {
-        onSubmit(true, 'Transaction created successfully!')
+        onSubmit(true, isEditing ? 'Transaction updated successfully!' : 'Transaction created successfully!')
       } else {
-        onSubmit(false, result.error || 'Failed to create transaction')
+        onSubmit(false, result.error || `Failed to ${isEditing ? 'update' : 'create'} transaction`)
       }
     } catch (error) {
       console.error('Error submitting transaction:', error)
@@ -473,7 +480,7 @@ export default function TransactionForm({
           className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {(isSubmitting || externalLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {(isSubmitting || externalLoading) ? 'Saving...' : 'Save Transaction'}
+          {(isSubmitting || externalLoading) ? 'Saving...' : isEditing ? 'Update Transaction' : 'Save Transaction'}
         </Button>
       </div>
     </form>

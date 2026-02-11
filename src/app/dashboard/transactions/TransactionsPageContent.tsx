@@ -23,12 +23,15 @@ import {
   ChevronRight,
   Tag,
   Store,
-  Wallet
+  Wallet,
+  Edit3,
+  Trash2,
+  MoreHorizontal
 } from 'lucide-react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { useSimpleTransactionForm } from '@/hooks/useSimpleTransactionForm'
 import { useTransactionList } from '@/hooks/useTransactionList'
-import { createTransaction } from '@/lib/actions/transaction-actions'
+import { createTransaction, updateTransaction, deleteTransaction } from '@/lib/actions/transaction-actions'
 
 type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER'
 type PaymentMode = 'CASH' | 'UPI' | 'CARD' | 'BANK'
@@ -38,6 +41,8 @@ export default function TransactionsPageContent() {
   const [showForm, setShowForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [editingTransaction, setEditingTransaction] = useState<any>(null)
+  const [showDropdown, setShowDropdown] = useState<string | null>(null)
   
   // Auto-open logic
   useEffect(() => {
@@ -45,6 +50,24 @@ export default function TransactionsPageContent() {
       setShowForm(true)
     }
   }, [searchParams])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showDropdown) {
+        const target = event.target as HTMLElement
+        // Don't close if clicking inside the dropdown or on the dropdown button
+        if (!target.closest('.dropdown-menu') && !target.closest('.dropdown-button')) {
+          setShowDropdown(null)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showDropdown])
   
   const {
     accounts,
@@ -79,11 +102,44 @@ export default function TransactionsPageContent() {
     isRecurring: false
   })
 
+  // Reset form when editing transaction changes
+  useEffect(() => {
+    if (editingTransaction) {
+      setFormData({
+        type: editingTransaction.type,
+        amount: editingTransaction.amount.toString(),
+        currency: editingTransaction.currency,
+        date: new Date(editingTransaction.date).toISOString().split('T')[0],
+        description: editingTransaction.description || '',
+        categoryId: editingTransaction.categoryId || '',
+        accountId: editingTransaction.accountId || '',
+        paymentMode: editingTransaction.paymentMode || 'CARD',
+        merchant: editingTransaction.merchant || '',
+        tags: editingTransaction.tags?.map((t: any) => t.tag?.name || t.name || t) || [],
+        isRecurring: editingTransaction.isRecurring || false
+      })
+    } else {
+      setFormData({
+        type: 'EXPENSE',
+        amount: '',
+        currency: 'USD',
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        categoryId: '',
+        accountId: '',
+        paymentMode: 'CARD',
+        merchant: '',
+        tags: [],
+        isRecurring: false
+      })
+    }
+  }, [editingTransaction])
+
   useEffect(() => {
     if (formData.type !== 'TRANSFER') {
       loadCategories(formData.type)
     }
-  }, [formData.type])
+  }, [formData.type, loadCategories])
 
   // UI Helpers
   const formatCurrency = (amount: number) => {
@@ -132,10 +188,18 @@ export default function TransactionsPageContent() {
         else formDataToSubmit.append(key, String(value))
       })
 
-      const result = await createTransaction(formDataToSubmit)
+      let result
+      if (editingTransaction) {
+        result = await updateTransaction(editingTransaction.id, formDataToSubmit)
+      } else {
+        result = await createTransaction(formDataToSubmit)
+      }
       
       if (result.success) {
-        setSubmitMessage({ type: 'success', text: 'Transaction recorded' })
+        setSubmitMessage({ 
+          type: 'success', 
+          text: editingTransaction ? 'Transaction updated successfully!' : 'Transaction created successfully!' 
+        })
         setFormData({
           type: 'EXPENSE',
           amount: '',
@@ -149,13 +213,14 @@ export default function TransactionsPageContent() {
           tags: [],
           isRecurring: false
         })
+        setEditingTransaction(null)
         loadTransactions(currentPage)
         setTimeout(() => {
           setShowForm(false)
           setSubmitMessage(null)
         }, 1500)
       } else {
-        setSubmitMessage({ type: 'error', text: result.error || 'Failed to create transaction' })
+        setSubmitMessage({ type: 'error', text: result.error || 'Failed to save transaction' })
       }
     } catch (error) {
       console.error('Error submitting:', error)
@@ -164,6 +229,55 @@ export default function TransactionsPageContent() {
       setIsSubmitting(false)
     }
   }
+
+  console.log(showForm)
+
+  const handleEdit = (transaction: any) => {
+    if (showForm) {
+      setShowForm(false)
+      setTimeout(() => {
+        setEditingTransaction(transaction)
+        setShowForm(true)
+        setShowDropdown(null)
+        setSubmitMessage(null)
+      }, 50)
+    } else {
+      setEditingTransaction(transaction)
+      setShowForm(true)
+      setShowDropdown(null)
+      setSubmitMessage(null)
+    }
+  }
+
+  const handleDelete = async (transactionId: string) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) {
+      return
+    }
+
+    try {
+      const result = await deleteTransaction(transactionId)
+      if (result.success) {
+        setSubmitMessage({ type: 'success', text: 'Transaction deleted successfully!' })
+        loadTransactions(currentPage)
+        setTimeout(() => setSubmitMessage(null), 3000)
+      } else {
+        setSubmitMessage({ type: 'error', text: result.error || 'Failed to delete transaction' })
+      }
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
+      setSubmitMessage({ type: 'error', text: 'Failed to delete transaction.' })
+    }
+    setShowDropdown(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTransaction(null)
+    setShowForm(false)
+    setSubmitMessage(null)
+  }
+
+
+  console.log(showDropdown)
 
   return (
     <DashboardLayout>
@@ -182,8 +296,17 @@ export default function TransactionsPageContent() {
             </button>
             <button
               onClick={() => {
-                setShowForm(!showForm)
-                setSubmitMessage(null)
+                if (showForm) {
+                  // Close the form
+                  setShowForm(false)
+                  setEditingTransaction(null)
+                  setSubmitMessage(null)
+                } else {
+                  // Open form in add mode
+                  setEditingTransaction(null)
+                  setShowForm(true)
+                  setSubmitMessage(null)
+                }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all text-sm font-semibold"
             >
@@ -222,7 +345,28 @@ export default function TransactionsPageContent() {
               className="overflow-hidden"
             >
               <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm mb-8">
-                <h3 className="text-lg font-semibold text-white mb-6">Add Transaction</h3>
+                <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                  {editingTransaction ? (
+                    <>
+                      <Edit3 className="w-5 h-5 text-indigo-400" />
+                      Edit Transaction
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-5 h-5 text-indigo-400" />
+                      Add Transaction
+                    </>
+                  )}
+                </h3>
+                
+                {editingTransaction && (
+                  <div className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                    <p className="text-sm text-indigo-300">
+                      Editing: <span className="font-medium">{editingTransaction.description}</span>
+                      {' '}({formatCurrency(editingTransaction.amount)})
+                    </p>
+                  </div>
+                )}
                 
                 {isLoadingAccounts && (
                   <div className="mb-4 flex items-center gap-2 text-indigo-400 text-sm">
@@ -413,7 +557,7 @@ export default function TransactionsPageContent() {
                   <div className="flex justify-end gap-3 pt-6 border-t border-slate-800">
                     <button
                       type="button"
-                      onClick={() => setShowForm(false)}
+                      onClick={editingTransaction ? handleCancelEdit : () => setShowForm(false)}
                       className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm font-medium"
                     >
                       Cancel
@@ -424,7 +568,7 @@ export default function TransactionsPageContent() {
                       className="flex items-center gap-2 px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 text-sm"
                     >
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                      Save Transaction
+                      {isSubmitting ? 'Saving...' : editingTransaction ? 'Update Transaction' : 'Save Transaction'}
                     </button>
                   </div>
                 </form>
@@ -465,7 +609,7 @@ export default function TransactionsPageContent() {
               <div className="space-y-1">
                 {transactions.map((t) => (
                   <div key={t.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-700/50">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-1">
                       {/* Icon */}
                       <div className={`
                         w-10 h-10 rounded-full flex items-center justify-center border shrink-0
@@ -479,7 +623,7 @@ export default function TransactionsPageContent() {
                       </div>
                       
                       {/* Details */}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-200 truncate">{t.description}</p>
                           {t.merchant && (
@@ -500,18 +644,49 @@ export default function TransactionsPageContent() {
                       </div>
                     </div>
 
-                    {/* Amount */}
-                    <div className="text-right pl-4">
-                      <span className={`block font-semibold ${
-                        t.type === 'INCOME' ? 'text-emerald-400' : 
-                        t.type === 'EXPENSE' ? 'text-slate-200' : 'text-blue-400'
-                      }`}>
-                        {t.type === 'EXPENSE' ? '-' : '+'}
-                        {formatCurrency(t.amount)}
-                      </span>
-                      {t.account && (
-                        <span className="text-xs text-slate-500">{t.account.name}</span>
-                      )}
+                    {/* Amount and Actions */}
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className={`block font-semibold ${
+                          t.type === 'INCOME' ? 'text-emerald-400' : 
+                          t.type === 'EXPENSE' ? 'text-slate-200' : 'text-blue-400'
+                        }`}>
+                          {t.type === 'EXPENSE' ? '-' : '+'}
+                          {formatCurrency(t.amount)}
+                        </span>
+                        {t.account && (
+                          <span className="text-xs text-slate-500">{t.account.name}</span>
+                        )}
+                      </div>
+
+                      {/* Actions Dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowDropdown(showDropdown === t.id ? null : t.id)}
+                          className="dropdown-button opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                        {showDropdown === t.id && (
+                          <div className="dropdown-menu absolute right-0 top-8 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-10 min-w-[120px]">
+                            <button
+                              onClick={() => handleEdit(t)}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors rounded-t-lg"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(t.id)}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors rounded-b-lg"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

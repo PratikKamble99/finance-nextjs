@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getAccountsForForm, getCategoriesForForm } from '@/lib/actions/dashboard-actions'
 
 interface Account {
@@ -52,7 +52,7 @@ export function useSimpleTransactionForm(): UseSimpleTransactionFormReturn {
     loadAccounts()
   }, [])
 
-  const loadCategories = async (type: 'INCOME' | 'EXPENSE') => {
+  const loadCategories = useCallback(async (type: 'INCOME' | 'EXPENSE') => {
     try {
       setIsLoadingCategories(true)
       setError(null)
@@ -72,7 +72,7 @@ export function useSimpleTransactionForm(): UseSimpleTransactionFormReturn {
     } finally {
       setIsLoadingCategories(false)
     }
-  }
+  }, [])
 
   return {
     accounts,

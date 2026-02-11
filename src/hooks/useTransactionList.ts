@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getTransactions } from '@/lib/actions/transaction-actions'
 
 interface Transaction {
@@ -27,7 +27,7 @@ export function useTransactionList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
 
-  const loadTransactions = async (page = 1) => {
+  const loadTransactions = useCallback(async (page = 1) => {
     try {
       setIsLoading(true)
       setError(null)
@@ -53,12 +53,14 @@ export function useTransactionList() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   // Load transactions once on mount
   useEffect(() => {
     loadTransactions(1)
-  }, [])
+  }, [loadTransactions])
+
+  const refreshTransactions = useCallback(() => loadTransactions(currentPage), [loadTransactions, currentPage])
 
   return {
     transactions,
@@ -68,6 +70,6 @@ export function useTransactionList() {
     currentPage,
     totalPages,
     loadTransactions,
-    refreshTransactions: () => loadTransactions(currentPage)
+    refreshTransactions
   }
 }
