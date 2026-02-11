@@ -39,10 +39,22 @@ type PaymentMode = 'CASH' | 'UPI' | 'CARD' | 'BANK'
 export default function TransactionsPageContent() {
   const searchParams = useSearchParams()
   const [showForm, setShowForm] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
   const [showDropdown, setShowDropdown] = useState<string | null>(null)
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    type: '' as '' | TransactionType,
+    categoryId: '',
+    accountId: '',
+    paymentMode: '' as '' | PaymentMode,
+    dateFrom: '',
+    dateTo: '',
+    searchQuery: ''
+  })
   
   // Auto-open logic
   useEffect(() => {
@@ -230,8 +242,6 @@ export default function TransactionsPageContent() {
     }
   }
 
-  console.log(showForm)
-
   const handleEdit = (transaction: any) => {
     if (showForm) {
       setShowForm(false)
@@ -276,8 +286,44 @@ export default function TransactionsPageContent() {
     setSubmitMessage(null)
   }
 
-
-  console.log(showDropdown)
+  // Filter transactions based on filter state
+  const filteredTransactions = transactions.filter((t) => {
+    // Type filter
+    if (filters.type && t.type !== filters.type) return false
+    
+    // Category filter
+    if (filters.categoryId && t.category?.name) {
+      // Find the category name from the categories list
+      const selectedCategory = categories.find(c => c.id === filters.categoryId)
+      if (selectedCategory && t.category.name !== selectedCategory.name) return false
+    }
+    
+    // Account filter
+    if (filters.accountId && t.account?.name) {
+      // Find the account name from the accounts list
+      const selectedAccount = accounts.find(a => a.id === filters.accountId)
+      if (selectedAccount && t.account.name !== selectedAccount.name) return false
+    }
+    
+    // Payment mode filter
+    if (filters.paymentMode && t.paymentMode !== filters.paymentMode) return false
+    
+    // Date from filter
+    if (filters.dateFrom && new Date(t.date) < new Date(filters.dateFrom)) return false
+    
+    // Date to filter
+    if (filters.dateTo && new Date(t.date) > new Date(filters.dateTo)) return false
+    
+    // Search query filter (description or merchant)
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase()
+      const matchesDescription = t.description?.toLowerCase().includes(query)
+      const matchesMerchant = t.merchant?.toLowerCase().includes(query)
+      if (!matchesDescription && !matchesMerchant) return false
+    }
+    
+    return true
+  })
 
   return (
     <DashboardLayout>
@@ -290,12 +336,20 @@ export default function TransactionsPageContent() {
             <p className="text-slate-400 text-sm">Monitor your cash flow and expenses.</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors text-sm">
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`hidden sm:flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-sm ${
+                showFilters 
+                  ? 'bg-indigo-600 border-indigo-600 text-white' 
+                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
               <Filter className="w-4 h-4" />
               Filter
             </button>
             <button
               onClick={() => {
+                console.log(showForm)
                 if (showForm) {
                   // Close the form
                   setShowForm(false)
@@ -331,6 +385,149 @@ export default function TransactionsPageContent() {
             >
               {submitMessage.type === 'success' ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
               <span className="text-sm font-medium">{submitMessage.text}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Filter Panel */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Filter className="w-5 h-5 text-indigo-400" />
+                    Filter Transactions
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setFilters({
+                        type: '',
+                        categoryId: '',
+                        accountId: '',
+                        paymentMode: '',
+                        dateFrom: '',
+                        dateTo: '',
+                        searchQuery: ''
+                      })
+                    }}
+                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Search */}
+                  <div className="md:col-span-3">
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">Search</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Search className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        value={filters.searchQuery}
+                        onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                        className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                        placeholder="Search by description or merchant..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Transaction Type */}
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">Type</label>
+                    <select
+                      value={filters.type}
+                      onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as '' | TransactionType }))}
+                      className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                    >
+                      <option value="">All Types</option>
+                      <option value="INCOME">Income</option>
+                      <option value="EXPENSE">Expense</option>
+                      <option value="TRANSFER">Transfer</option>
+                    </select>
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">Category</label>
+                    <select
+                      value={filters.categoryId}
+                      onChange={(e) => setFilters(prev => ({ ...prev, categoryId: e.target.value }))}
+                      className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                    >
+                      <option value="">All Categories</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Account */}
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">Account</label>
+                    <select
+                      value={filters.accountId}
+                      onChange={(e) => setFilters(prev => ({ ...prev, accountId: e.target.value }))}
+                      className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                    >
+                      <option value="">All Accounts</option>
+                      {accounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Payment Mode */}
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">Payment Mode</label>
+                    <select
+                      value={filters.paymentMode}
+                      onChange={(e) => setFilters(prev => ({ ...prev, paymentMode: e.target.value as '' | PaymentMode }))}
+                      className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                    >
+                      <option value="">All Modes</option>
+                      <option value="CASH">Cash</option>
+                      <option value="CARD">Card</option>
+                      <option value="UPI">UPI</option>
+                      <option value="BANK">Bank Transfer</option>
+                    </select>
+                  </div>
+
+                  {/* Date From */}
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">From Date</label>
+                    <input
+                      type="date"
+                      value={filters.dateFrom}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                      className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all [color-scheme:dark]"
+                    />
+                  </div>
+
+                  {/* Date To */}
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">To Date</label>
+                    <input
+                      type="date"
+                      value={filters.dateTo}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                      className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -584,7 +781,7 @@ export default function TransactionsPageContent() {
           <div className="p-5 border-b border-slate-800 flex justify-between items-center">
             <h3 className="font-semibold text-white">Recent Activity</h3>
             <span className="text-xs text-slate-500 bg-slate-950 border border-slate-800 px-2 py-1 rounded-md">
-              {totalCount} Entries
+              {filteredTransactions.length} {filteredTransactions.length !== totalCount && `of ${totalCount}`} Entries
             </span>
           </div>
 
@@ -595,19 +792,25 @@ export default function TransactionsPageContent() {
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
                 <p>Loading records...</p>
               </div>
-            ) : transactions.length === 0 ? (
+            ) : filteredTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-4">
                 <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center">
                   <Banknote className="w-8 h-8 opacity-50" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-slate-300">No transactions yet</p>
-                  <p className="text-sm">Record your first income or expense above.</p>
+                  <p className="text-lg font-medium text-slate-300">
+                    {transactions.length === 0 ? 'No transactions yet' : 'No matching transactions'}
+                  </p>
+                  <p className="text-sm">
+                    {transactions.length === 0 
+                      ? 'Record your first income or expense above.' 
+                      : 'Try adjusting your filters to see more results.'}
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="space-y-1">
-                {transactions.map((t) => (
+                {filteredTransactions.map((t) => (
                   <div key={t.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-700/50">
                     <div className="flex items-center gap-4 flex-1">
                       {/* Icon */}
