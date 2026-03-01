@@ -28,6 +28,8 @@ import {
     Trash2,
     MoreHorizontal,
     Copy,
+    FileText,
+    TrendingUp,
 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useSimpleTransactionForm } from "@/hooks/useSimpleTransactionForm";
@@ -430,21 +432,21 @@ export default function TransactionsPageContent() {
         <DashboardLayout>
             <div className="space-y-6">
                 {/* Page Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-white tracking-tight">
+                        <h1 className="text-2xl font-bold tracking-tight text-white">
                             Transactions
                         </h1>
-                        <p className="text-slate-400 text-sm">
+                        <p className="text-sm text-slate-400">
                             Monitor your cash flow and expenses.
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex gap-3 items-center">
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className={`hidden sm:flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors text-sm ${
                                 showFilters
-                                    ? "bg-indigo-600 border-indigo-600 text-white"
+                                    ? "text-white bg-indigo-600 border-indigo-600"
                                     : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800"
                             }`}
                         >
@@ -457,7 +459,7 @@ export default function TransactionsPageContent() {
                                 onClick={() =>
                                     setShowExportDropdown(!showExportDropdown)
                                 }
-                                className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors text-sm"
+                                className="hidden gap-2 items-center px-3 py-2 text-sm rounded-lg border transition-colors sm:flex bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800"
                             >
                                 <Download className="w-4 h-4" />
                                 Export
@@ -469,7 +471,7 @@ export default function TransactionsPageContent() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 10 }}
-                                        className="absolute right-0 mt-2 w-40 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden"
+                                        className="overflow-hidden absolute right-0 z-50 mt-2 w-40 rounded-xl border shadow-xl bg-slate-900 border-slate-800"
                                     >
                                         <button
                                             onClick={() => {
@@ -478,7 +480,7 @@ export default function TransactionsPageContent() {
                                                 );
                                                 setShowExportDropdown(false);
                                             }}
-                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                            className="flex gap-3 items-center px-4 py-3 w-full text-sm transition-colors text-slate-300 hover:bg-slate-800 hover:text-white"
                                         >
                                             <FileText className="w-4 h-4 text-red-400" />
                                             Export to PDF
@@ -490,7 +492,7 @@ export default function TransactionsPageContent() {
                                                 );
                                                 setShowExportDropdown(false);
                                             }}
-                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors border-t border-slate-800/50"
+                                            className="flex gap-3 items-center px-4 py-3 w-full text-sm border-t transition-colors text-slate-300 hover:bg-slate-800 hover:text-white border-slate-800/50"
                                         >
                                             <TrendingUp className="w-4 h-4 text-emerald-400" />
                                             Export to Excel
@@ -515,7 +517,7 @@ export default function TransactionsPageContent() {
                                     setSubmitMessage(null);
                                 }
                             }}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all text-sm font-semibold"
+                            className="flex gap-2 items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg shadow-lg transition-all hover:bg-indigo-500 shadow-indigo-500/20"
                         >
                             {showForm ? (
                                 <X className="w-4 h-4" />
@@ -561,9 +563,9 @@ export default function TransactionsPageContent() {
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <div className="p-6 rounded-2xl border backdrop-blur-sm bg-slate-900/50 border-slate-800">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="flex gap-2 items-center text-lg font-semibold text-white">
                                         <Filter className="w-5 h-5 text-indigo-400" />
                                         Filter Transactions
                                     </h3>
@@ -579,20 +581,20 @@ export default function TransactionsPageContent() {
                                                 searchQuery: "",
                                             });
                                         }}
-                                        className="text-sm text-slate-400 hover:text-white transition-colors"
+                                        className="text-sm transition-colors text-slate-400 hover:text-white"
                                     >
                                         Clear All
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                     {/* Search */}
                                     <div className="md:col-span-3">
                                         <label className="text-xs font-medium text-slate-400 ml-1 mb-1.5 block">
                                             Search
                                         </label>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                 <Search className="w-4 h-4" />
                                             </div>
                                             <input
@@ -777,8 +779,8 @@ export default function TransactionsPageContent() {
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm mb-8">
-                                <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                            <div className="p-6 mb-8 rounded-2xl border backdrop-blur-sm bg-slate-900/50 border-slate-800">
+                                <h3 className="flex gap-2 items-center mb-6 text-lg font-semibold text-white">
                                     {editingTransaction ? (
                                         <>
                                             <Edit3 className="w-5 h-5 text-indigo-400" />
@@ -793,7 +795,7 @@ export default function TransactionsPageContent() {
                                 </h3>
 
                                 {editingTransaction && (
-                                    <div className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                                    <div className="p-3 mb-4 rounded-lg border bg-indigo-500/10 border-indigo-500/20">
                                         <p className="text-sm text-indigo-300">
                                             Editing:{" "}
                                             <span className="font-medium">
@@ -809,7 +811,7 @@ export default function TransactionsPageContent() {
                                 )}
 
                                 {isLoadingAccounts && (
-                                    <div className="mb-4 flex items-center gap-2 text-indigo-400 text-sm">
+                                    <div className="flex gap-2 items-center mb-4 text-sm text-indigo-400">
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                         Syncing account data...
                                     </div>
@@ -864,13 +866,13 @@ export default function TransactionsPageContent() {
                         `}
                                                 >
                                                     {type === "INCOME" && (
-                                                        <ArrowUpRight className="w-5 h-5 mb-1" />
+                                                        <ArrowUpRight className="mb-1 w-5 h-5" />
                                                     )}
                                                     {type === "EXPENSE" && (
-                                                        <ArrowDownRight className="w-5 h-5 mb-1" />
+                                                        <ArrowDownRight className="mb-1 w-5 h-5" />
                                                     )}
                                                     {type === "TRANSFER" && (
-                                                        <ArrowRightLeft className="w-5 h-5 mb-1" />
+                                                        <ArrowRightLeft className="mb-1 w-5 h-5" />
                                                     )}
                                                     <span className="text-xs font-bold tracking-wider">
                                                         {type}
@@ -881,14 +883,14 @@ export default function TransactionsPageContent() {
                                     </div>
 
                                     {/* Inputs Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                                         {/* Amount */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Amount
                                             </label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                     $
                                                 </div>
                                                 <input
@@ -912,11 +914,11 @@ export default function TransactionsPageContent() {
 
                                         {/* Date */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Date
                                             </label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                     <Calendar className="w-4 h-4" />
                                                 </div>
                                                 <input
@@ -936,7 +938,7 @@ export default function TransactionsPageContent() {
 
                                         {/* Description */}
                                         <div className="space-y-1.5 md:col-span-2">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Description
                                             </label>
                                             <input
@@ -957,11 +959,11 @@ export default function TransactionsPageContent() {
 
                                         {/* Category */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Category
                                             </label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                     <Tag className="w-4 h-4" />
                                                 </div>
                                                 <select
@@ -1001,7 +1003,7 @@ export default function TransactionsPageContent() {
                                                         ),
                                                     )}
                                                 </select>
-                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 right-0 items-center pr-3 pointer-events-none text-slate-500">
                                                     <ChevronLeft className="w-4 h-4 -rotate-90" />
                                                 </div>
                                             </div>
@@ -1009,11 +1011,11 @@ export default function TransactionsPageContent() {
 
                                         {/* Account */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Account
                                             </label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                     <Wallet className="w-4 h-4" />
                                                 </div>
                                                 <select
@@ -1039,7 +1041,7 @@ export default function TransactionsPageContent() {
                                                         </option>
                                                     ))}
                                                 </select>
-                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 right-0 items-center pr-3 pointer-events-none text-slate-500">
                                                     <ChevronLeft className="w-4 h-4 -rotate-90" />
                                                 </div>
                                             </div>
@@ -1047,11 +1049,11 @@ export default function TransactionsPageContent() {
 
                                         {/* Merchant (Optional) */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Merchant (Optional)
                                             </label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                     <Store className="w-4 h-4" />
                                                 </div>
                                                 <input
@@ -1071,11 +1073,11 @@ export default function TransactionsPageContent() {
                                         </div>
                                         {/* Payment Mode */}
                                         <div className="space-y-1.5">
-                                            <label className="text-xs font-medium text-slate-400 ml-1">
+                                            <label className="ml-1 text-xs font-medium text-slate-400">
                                                 Payment Mode
                                             </label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
                                                     {getPaymentModeIcon(
                                                         formData.paymentMode,
                                                     )}
@@ -1105,7 +1107,7 @@ export default function TransactionsPageContent() {
                                                         Bank Transfer
                                                     </option>
                                                 </select>
-                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500">
+                                                <div className="flex absolute inset-y-0 right-0 items-center pr-3 pointer-events-none text-slate-500">
                                                     <ChevronLeft className="w-4 h-4 -rotate-90" />
                                                 </div>
                                             </div>
@@ -1113,7 +1115,7 @@ export default function TransactionsPageContent() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex justify-end gap-3 pt-6 border-t border-slate-800">
+                                    <div className="flex gap-3 justify-end pt-6 border-t border-slate-800">
                                         <button
                                             type="button"
                                             onClick={
@@ -1121,7 +1123,7 @@ export default function TransactionsPageContent() {
                                                     ? handleCancelEdit
                                                     : () => setShowForm(false)
                                             }
-                                            className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm font-medium"
+                                            className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
                                         >
                                             Cancel
                                         </button>
@@ -1131,7 +1133,7 @@ export default function TransactionsPageContent() {
                                                 isSubmitting ||
                                                 isLoadingAccounts
                                             }
-                                            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 text-sm"
+                                            className="flex gap-2 items-center px-6 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-lg transition-all hover:bg-indigo-500 shadow-indigo-500/20 disabled:opacity-50"
                                         >
                                             {isSubmitting ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -1154,11 +1156,11 @@ export default function TransactionsPageContent() {
                 {/* Transaction List Container */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-2xl backdrop-blur-sm flex flex-col min-h-[500px]">
                     {/* List Header */}
-                    <div className="p-5 border-b border-slate-800 flex justify-between items-center">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-800">
                         <h3 className="font-semibold text-white">
                             Recent Activity
                         </h3>
-                        <span className="text-xs text-slate-500 bg-slate-950 border border-slate-800 px-2 py-1 rounded-md">
+                        <span className="px-2 py-1 text-xs rounded-md border text-slate-500 bg-slate-950 border-slate-800">
                             {filteredTransactions.length}{" "}
                             {filteredTransactions.length !== totalCount &&
                                 `of ${totalCount}`}{" "}
@@ -1169,13 +1171,13 @@ export default function TransactionsPageContent() {
                     {/* List Content */}
                     <div className="flex-1 p-2">
                         {isLoadingTransactions ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
-                                <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                            <div className="flex flex-col gap-3 justify-center items-center h-64 text-slate-500">
+                                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
                                 <p>Loading records...</p>
                             </div>
                         ) : filteredTransactions.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-4">
-                                <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center">
+                            <div className="flex flex-col gap-4 justify-center items-center h-64 text-slate-500">
+                                <div className="flex justify-center items-center w-16 h-16 rounded-full bg-slate-800/50">
                                     <Banknote className="w-8 h-8 opacity-50" />
                                 </div>
                                 <div className="text-center">
@@ -1196,9 +1198,9 @@ export default function TransactionsPageContent() {
                                 {filteredTransactions.map((t) => (
                                     <div
                                         key={t.id}
-                                        className="group flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-700/50"
+                                        className="flex justify-between items-center p-3 rounded-xl border border-transparent transition-all group hover:bg-slate-800/50 hover:border-slate-700/50"
                                     >
-                                        <div className="flex items-center gap-4 flex-1">
+                                        <div className="flex flex-1 gap-4 items-center">
                                             {/* Icon */}
                                             <div
                                                 className={`
@@ -1220,9 +1222,9 @@ export default function TransactionsPageContent() {
                                             </div>
 
                                             {/* Details */}
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-medium text-slate-200 truncate">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex gap-2 items-center">
+                                                    <p className="font-medium truncate text-slate-200">
                                                         {t.description}
                                                     </p>
                                                     {t.merchant && (
@@ -1244,7 +1246,7 @@ export default function TransactionsPageContent() {
                                                     <span className="hidden sm:inline">
                                                         •
                                                     </span>
-                                                    <span className="hidden sm:inline flex items-center gap-1">
+                                                    <span className="flex hidden gap-1 items-center sm:inline">
                                                         {getPaymentModeIcon(
                                                             t.paymentMode,
                                                         )}{" "}
@@ -1255,7 +1257,7 @@ export default function TransactionsPageContent() {
                                         </div>
 
                                         {/* Amount and Actions */}
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex gap-3 items-center">
                                             <div className="text-right">
                                                 <span
                                                     className={`block font-semibold ${
@@ -1290,7 +1292,7 @@ export default function TransactionsPageContent() {
                                                                 : t.id,
                                                         )
                                                     }
-                                                    className="dropdown-button opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+                                                    className="p-1 rounded-lg opacity-0 transition-all dropdown-button group-hover:opacity-100 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
                                                 >
                                                     <MoreHorizontal className="w-4 h-4" />
                                                 </button>
@@ -1301,7 +1303,7 @@ export default function TransactionsPageContent() {
                                                             onClick={() =>
                                                                 handleEdit(t)
                                                             }
-                                                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors rounded-t-lg"
+                                                            className="flex gap-2 items-center px-3 py-2 w-full text-sm rounded-t-lg transition-colors text-slate-300 hover:bg-slate-700 hover:text-white"
                                                         >
                                                             <Edit3 className="w-3 h-3" />
                                                             Edit
@@ -1310,7 +1312,7 @@ export default function TransactionsPageContent() {
                                                             onClick={() =>
                                                                 handleRepeat(t)
                                                             }
-                                                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                                                            className="flex gap-2 items-center px-3 py-2 w-full text-sm transition-colors text-slate-300 hover:bg-slate-700 hover:text-white"
                                                         >
                                                             <Copy className="w-3 h-3" />
                                                             Repeat
@@ -1321,7 +1323,7 @@ export default function TransactionsPageContent() {
                                                                     t.id,
                                                                 )
                                                             }
-                                                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors rounded-b-lg"
+                                                            className="flex gap-2 items-center px-3 py-2 w-full text-sm text-red-400 rounded-b-lg transition-colors hover:bg-red-500/10 hover:text-red-300"
                                                         >
                                                             <Trash2 className="w-3 h-3" />
                                                             Delete
@@ -1338,7 +1340,7 @@ export default function TransactionsPageContent() {
 
                     {/* Pagination Footer */}
                     {totalPages > 1 && (
-                        <div className="p-4 border-t border-slate-800 flex items-center justify-between">
+                        <div className="flex justify-between items-center p-4 border-t border-slate-800">
                             <button
                                 onClick={() =>
                                     loadTransactions(currentPage - 1)
@@ -1354,7 +1356,7 @@ export default function TransactionsPageContent() {
 
                             <span className="text-sm text-slate-500">
                                 Page{" "}
-                                <span className="text-slate-200 font-medium">
+                                <span className="font-medium text-slate-200">
                                     {currentPage}
                                 </span>{" "}
                                 of {totalPages}
