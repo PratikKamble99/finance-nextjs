@@ -125,3 +125,179 @@ export const exportToExcel = (transactions: Transaction[]) => {
     // Save file
     XLSX.writeFile(workbook, `Transactions_Export_${new Date().getTime()}.xlsx`);
 };
+
+/**
+ * Export report data to PDF
+ */
+export const exportReportToPDF = (
+    type: string,
+    data: any,
+    options: { startDate?: string; endDate?: string } = {},
+) => {
+    const doc = new jsPDF();
+    const title = type
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
+    // Add Header
+    doc.setFontSize(20);
+    doc.setTextColor(63, 81, 181); // Indigo color
+    doc.text(title, 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString("en-IN")}`, 14, 30);
+
+    if (options.startDate && options.endDate) {
+        doc.text(`Period: ${options.startDate} to ${options.endDate}`, 14, 35);
+    }
+
+    let finalY = 40;
+
+    if (type === "income-expense") {
+        const { summary, incomeByCategory, expensesByCategory, monthlyTrends } =
+            data;
+
+        // Summary Section
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text("Summary", 14, finalY + 10);
+
+        (doc as any).autoTable({
+            startY: finalY + 15,
+            head: [["Metric", "Value"]],
+            body: [
+                ["Total Income", formatCurrency(summary.totalIncome)],
+                ["Total Expenses", formatCurrency(summary.totalExpenses)],
+                ["Net Cash Flow", formatCurrency(summary.netIncome)],
+                ["Transaction Count", summary.transactionCount.toString()],
+            ],
+            theme: "striped",
+            headStyles: { fillColor: [63, 81, 181] },
+        });
+
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+
+        // Monthly Trends
+        doc.text("Monthly Cash Flow", 14, finalY + 5);
+        (doc as any).autoTable({
+            startY: finalY + 10,
+            head: [["Month", "Income", "Expenses", "Net"]],
+            body: monthlyTrends.map((t: any) => [
+                t.month,
+                formatCurrency(t.income),
+                formatCurrency(t.expenses),
+                formatCurrency(t.net),
+            ]),
+            headStyles: { fillColor: [63, 81, 181] },
+        });
+    } else if (type === "account-balance") {
+        const { summary, accounts } = data;
+
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text("Account Balances", 14, finalY + 10);
+
+        (doc as any).autoTable({
+            startY: finalY + 15,
+            head: [["Account Name", "Institution", "Type", "Balance"]],
+            body: accounts.map((a: any) => [
+                a.name,
+                a.bank || "N/A",
+                a.type,
+                formatCurrency(a.currentBalance),
+            ]),
+            headStyles: { fillColor: [63, 81, 181] },
+        });
+
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+        doc.text(
+            `Total Net Worth: ${formatCurrency(summary.totalBalance)}`,
+            14,
+            finalY,
+        );
+    } else if (type === "spending-trends") {
+        const { summary, topCategories, monthlyTrends } = data;
+
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text("Spending Analysis", 14, finalY + 10);
+
+        (doc as any).autoTable({
+            startY: finalY + 15,
+            head: [["Metric", "Value"]],
+            body: [
+                ["Total Spending", formatCurrency(summary.totalSpending)],
+                ["Monthly Average", formatCurrency(summary.averageMonthly)],
+                ["Transaction Count", summary.transactionCount.toString()],
+            ],
+            headStyles: { fillColor: [63, 81, 181] },
+        });
+
+        finalY = (doc as any).lastAutoTable.finalY + 10;
+        doc.text("Top Categories", 14, finalY + 5);
+        (doc as any).autoTable({
+            startY: finalY + 10,
+            head: [["Category", "Amount"]],
+            body: topCategories.map((c: any) => [
+                c.category,
+                formatCurrency(c.amount),
+            ]),
+            headStyles: { fillColor: [63, 81, 181] },
+        });
+    }
+
+    doc.save(`${type}_report_${new Date().getTime()}.pdf`);
+};
+
+/**
+ * Export report data to Excel
+ */
+export const exportReportToExcel = (type: string, data: any) => {
+    const workbook = XLSX.utils.book_new();
+
+    if (type === "income-expense") {
+        const summaryData = [
+            ["Metric", "Value"],
+            ["Total Income", data.summary.totalIncome],
+            ["Total Expenses", data.summary.totalExpenses],
+            ["Net Cash Flow", data.summary.netIncome],
+        ];
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(workbook, wsSummary, "Summary");
+
+        const trendsData = [
+            ["Month", "Income", "Expenses", "Net"],
+            ...data.monthlyTrends.map((t: any) => [
+                t.month,
+                t.income,
+                t.expenses,
+                t.net,
+            ]),
+        ];
+        const wsTrends = XLSX.utils.aoa_to_sheet(trendsData);
+        XLSX.utils.book_append_sheet(workbook, wsTrends, "Monthly Trends");
+    } else if (type === "account-balance") {
+        const accountsData = [
+            ["Name", "Institution", "Type", "Balance"],
+            ...data.accounts.map((a: any) => [
+                a.name,
+                a.bank,
+                a.type,
+                a.currentBalance,
+            ]),
+        ];
+        const wsAccounts = XLSX.utils.aoa_to_sheet(accountsData);
+        XLSX.utils.book_append_sheet(workbook, wsAccounts, "Accounts");
+    } else if (type === "spending-trends") {
+        const categoriesData = [
+            ["Category", "Amount"],
+            ...data.topCategories.map((c: any) => [c.category, c.amount]),
+        ];
+        const wsCategories = XLSX.utils.aoa_to_sheet(categoriesData);
+        XLSX.utils.book_append_sheet(workbook, wsCategories, "Top Categories");
+    }
+
+    XLSX.writeFile(workbook, `${type}_report_${new Date().getTime()}.xlsx`);
+};
