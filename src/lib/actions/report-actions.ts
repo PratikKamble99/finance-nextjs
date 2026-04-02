@@ -101,7 +101,7 @@ export async function getIncomeExpenseReport(
         totalIncome: income,
         totalExpenses: expenses,
         netIncome: income - expenses,
-        transactionCount: transactions.length
+        transactionCount: transactions.filter(t => t.type !== 'TRANSFER').length
       },
       incomeByCategory,
       expensesByCategory,

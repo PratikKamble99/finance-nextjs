@@ -1,50 +1,26 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { KeyRound, ArrowRight, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react'
+import { Mail, ArrowRight, Loader2, KeyRound, CheckCircle2 } from 'lucide-react'
 
-function ResetPasswordForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token')
-
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!token) {
-      router.replace('/forgot-password')
-    }
-  }, [token, router])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long.')
-      return
-    }
-
     setIsLoading(true)
+    setError('')
 
     try {
       const response = await fetch('/api/auth/reset-password', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword }),
+        body: JSON.stringify({ email }),
       })
 
       const data = await response.json()
@@ -52,7 +28,7 @@ function ResetPasswordForm() {
       if (data.success) {
         setIsSuccess(true)
       } else {
-        setError(data.error?.message ?? 'Failed to reset password. Please try again.')
+        setError(data.error?.message ?? 'Failed to send reset email. Please try again.')
       }
     } catch {
       setError('An unexpected error occurred. Please try again.')
@@ -60,8 +36,6 @@ function ResetPasswordForm() {
       setIsLoading(false)
     }
   }
-
-  if (!token) return null
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden selection:bg-indigo-500/30">
@@ -92,18 +66,29 @@ function ResetPasswordForm() {
                 <CheckCircle2 className="w-8 h-8 text-green-400" />
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight mb-3">
-                Password updated
+                Check your inbox
               </h2>
-              <p className="text-slate-400 text-sm leading-relaxed mb-8">
-                Your password has been reset successfully. You can now sign in with your new password.
+              <p className="text-slate-400 text-sm leading-relaxed mb-2">
+                We&apos;ve sent a password reset link to
               </p>
-              <Link
-                href="/auth/login"
-                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-[0_0_20px_-5px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_-5px_rgba(79,70,229,0.5)]"
-              >
-                <span>Sign in</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+              <p className="text-indigo-400 font-medium text-sm mb-8">{email}</p>
+              <p className="text-slate-500 text-xs leading-relaxed mb-8">
+                The link expires in 1 hour. Check your spam folder if you don&apos;t see it.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => { setIsSuccess(false); setEmail('') }}
+                  className="w-full py-3 px-4 border border-slate-700 rounded-xl text-sm font-medium text-slate-300 bg-transparent hover:bg-slate-800 transition-all"
+                >
+                  Try a different email
+                </button>
+                <Link
+                  href="/auth/login"
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-[0_0_20px_-5px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_-5px_rgba(79,70,229,0.5)]"
+                >
+                  Back to sign in
+                </Link>
+              </div>
             </motion.div>
           ) : (
             <>
@@ -113,56 +98,32 @@ function ResetPasswordForm() {
                   <KeyRound className="w-8 h-8 text-indigo-400" />
                 </div>
                 <h2 className="text-3xl font-bold text-white tracking-tight mb-2">
-                  Set new password
+                  Forgot password?
                 </h2>
                 <p className="text-slate-400 text-sm">
-                  Choose a strong password for your account.
+                  Enter your email and we&apos;ll send you a reset link.
                 </p>
               </div>
 
-              <form className="space-y-5" onSubmit={handleSubmit}>
+              <form className="space-y-6" onSubmit={handleSubmit}>
                 <div className="space-y-2">
-                  <label htmlFor="new-password" className="text-sm font-medium text-slate-300 ml-1">
-                    New password
+                  <label htmlFor="email" className="text-sm font-medium text-slate-300 ml-1">
+                    Email address
                   </label>
                   <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                    </div>
                     <input
-                      id="new-password"
-                      name="new-password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
                       required
-                      className="block w-full pl-4 pr-12 py-3 bg-slate-950/50 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-                      placeholder="Min. 8 characters"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="confirm-password" className="text-sm font-medium text-slate-300 ml-1">
-                    Confirm new password
-                  </label>
-                  <div className="relative group">
-                    <input
-                      id="confirm-password"
-                      name="confirm-password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      required
-                      className="block w-full pl-4 pr-4 py-3 bg-slate-950/50 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-                      placeholder="Re-enter your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="block w-full pl-11 pr-4 py-3 bg-slate-950/50 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                 </div>
@@ -186,23 +147,23 @@ function ResetPasswordForm() {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="animate-spin h-5 w-5" />
-                      <span>Resetting password...</span>
+                      <span>Sending reset link...</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span>Reset password</span>
+                      <span>Send reset link</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </div>
                   )}
                 </button>
 
                 <div className="text-center pt-2 border-t border-slate-800">
-                  <p className="text-sm text-slate-500">
-                    Link expired?{' '}
-                    <Link href="/forgot-password" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
-                      Request a new one
-                    </Link>
-                  </p>
+                  <Link
+                    href="/auth/login"
+                    className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    Back to sign in
+                  </Link>
                 </div>
               </form>
             </>
@@ -210,13 +171,5 @@ function ResetPasswordForm() {
         </div>
       </motion.div>
     </div>
-  )
-}
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense>
-      <ResetPasswordForm />
-    </Suspense>
   )
 }

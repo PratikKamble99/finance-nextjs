@@ -67,3 +67,8 @@ export type Budget = Prisma.BudgetModel
  * 
  */
 export type NetWorthSnapshot = Prisma.NetWorthSnapshotModel
+/**
+ * Model PasswordResetToken
+ * 
+ */
+export type PasswordResetToken = Prisma.PasswordResetTokenModel

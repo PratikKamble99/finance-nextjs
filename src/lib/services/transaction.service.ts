@@ -118,9 +118,11 @@ export async function createTransaction(userId: string, data: any) {
       )
     }
 
-    // Update account balance if account is linked
+    // Update account balance if account is linked.
+    // INCOME and TRANSFER both add to the linked account balance;
+    // only EXPENSE subtracts (money leaving the account).
     if (validatedData.accountId) {
-      const operation = validatedData.type === 'INCOME' ? 'add' : 'subtract'
+      const operation = validatedData.type === 'EXPENSE' ? 'subtract' : 'add'
       await updateAccountBalance(validatedData.accountId, validatedData.amount, operation)
     }
 
@@ -152,7 +154,7 @@ export async function updateTransaction(id: string, data: any) {
 
     // Revert original balance change if account was linked
     if (originalTransaction.accountId) {
-      const revertOperation = originalTransaction.type === 'INCOME' ? 'subtract' : 'add'
+      const revertOperation = originalTransaction.type === 'EXPENSE' ? 'add' : 'subtract'
       await updateAccountBalance(originalTransaction.accountId, Number(originalTransaction.amount), revertOperation)
     }
 
@@ -212,7 +214,7 @@ export async function updateTransaction(id: string, data: any) {
 
     // Apply new balance change if account is linked
     if (updatedTransaction.accountId) {
-      const operation = updatedTransaction.type === 'INCOME' ? 'add' : 'subtract'
+      const operation = updatedTransaction.type === 'EXPENSE' ? 'subtract' : 'add'
       await updateAccountBalance(updatedTransaction.accountId, Number(updatedTransaction.amount), operation)
     }
 
@@ -241,7 +243,7 @@ export async function deleteTransaction(id: string) {
 
     // Revert balance change if account was linked
     if (transaction.accountId) {
-      const revertOperation = transaction.type === 'INCOME' ? 'subtract' : 'add'
+      const revertOperation = transaction.type === 'EXPENSE' ? 'add' : 'subtract'
       await updateAccountBalance(transaction.accountId, Number(transaction.amount), revertOperation)
     }
 

@@ -30,6 +30,7 @@ model User {
   tags         Tag[]
   budgets      Budget[]
   netWorthSnapshots NetWorthSnapshot[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -222,6 +223,18 @@ model NetWorthSnapshot {
 
   @@unique([userId, date])
   @@map("net_worth_snapshots")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 // Enums
