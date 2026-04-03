@@ -1,495 +1,445 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { TransactionType, PaymentMode, CreateTransactionRequest } from '@/types'
-import ReceiptUpload from './ReceiptUpload'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, DollarSign, Calendar, FileText, Tag, CreditCard, Store } from 'lucide-react'
-import { useSimpleTransactionForm } from '@/hooks/useSimpleTransactionForm'
-import { createTransaction, updateTransaction } from '@/lib/actions/transaction-actions'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+    Plus,
+    Check,
+    Calendar,
+    CreditCard,
+    Smartphone,
+    Landmark,
+    Banknote,
+    ArrowUpRight,
+    ArrowDownRight,
+    ArrowRightLeft,
+    Loader2,
+    ChevronLeft,
+    Tag,
+    Store,
+    Wallet,
+    Edit3,
+} from "lucide-react";
+import { useSimpleTransactionForm } from "@/hooks/useSimpleTransactionForm";
+import { createTransaction, updateTransaction } from "@/lib/actions/transaction-actions";
+
+type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER";
+type PaymentMode = "CASH" | "UPI" | "CARD" | "BANK";
 
 interface TransactionFormProps {
-  onSubmit: (success: boolean, message?: string) => void
-  onCancel: () => void
-  initialData?: Partial<CreateTransactionRequest> & { id?: string }
-  isLoading?: boolean
-  isEditing?: boolean
+    initialData?: any;
+    onCancel?: () => void;
 }
 
-export default function TransactionForm({ 
-  onSubmit, 
-  onCancel, 
-  initialData, 
-  isLoading: externalLoading = false,
-  isEditing = false
-}: TransactionFormProps) {
-  const {
-    categories,
-    accounts,
-    isLoadingAccounts,
-    isLoadingCategories,
-    error: formError,
-    loadCategories
-  } = useSimpleTransactionForm()
+export default function TransactionForm({ initialData, onCancel }: TransactionFormProps) {
+    const router = useRouter();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitMessage, setSubmitMessage] = useState<{
+        type: "success" | "error";
+        text: string;
+    } | null>(null);
 
-  const [formData, setFormData] = useState<CreateTransactionRequest>(() => {
-    const defaults: CreateTransactionRequest = {
-      type: 'EXPENSE',
-      amount: 0,
-      currency: 'USD',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      categoryId: '',
-      tags: [],
-      accountId: '',
-      paymentMode: 'CARD',
-      merchant: '',
-      receiptUrl: '',
-      isRecurring: false,
-      ...initialData
-    }
-    // Normalize date to YYYY-MM-DD for the date input (handles ISO strings from editing)
-    if (defaults.date && defaults.date.includes('T')) {
-      defaults.date = defaults.date.split('T')[0]
-    }
-    return defaults
-  })
+    const { accounts, categories, isLoadingAccounts, isLoadingCategories, loadCategories } =
+        useSimpleTransactionForm();
 
-  const [newTag, setNewTag] = useState('')
-  const [receiptFile, setReceiptFile] = useState<File | null>(null)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+    const [formData, setFormData] = useState({
+        type: (initialData?.type || "EXPENSE") as TransactionType,
+        amount: initialData?.amount ? initialData.amount.toString() : "",
+        currency: initialData?.currency || "USD",
+        date: initialData?.date
+            ? new Date(initialData.date).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
+        description: initialData?.description || "",
+        categoryId: initialData?.categoryId || "",
+        accountId: initialData?.accountId || "",
+        paymentMode: (initialData?.paymentMode || "CARD") as PaymentMode,
+        merchant: initialData?.merchant || "",
+        tags: initialData?.tags?.map((t: any) => t.tag?.name || t.name || t) || ([] as string[]),
+        isRecurring: initialData?.isRecurring || false,
+    });
 
-  // Load categories when transaction type changes
-  useEffect(() => {
-    if (formData.type === 'INCOME' || formData.type === 'EXPENSE') {
-      loadCategories(formData.type)
-    }
-  }, [formData.type, loadCategories])
+    useEffect(() => {
+        if (formData.type !== "TRANSFER") {
+            loadCategories(formData.type);
+        }
+    }, [formData.type, loadCategories]);
 
-  // Set form error from hook
-  useEffect(() => {
-    if (formError) {
-      setErrors(prev => ({ ...prev, general: formError }))
-    }
-  }, [formError])
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount);
+    };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
+    const getPaymentModeIcon = (mode?: string) => {
+        switch (mode) {
+            case "CASH":
+                return <Banknote className="w-4 h-4" />;
+            case "CARD":
+                return <CreditCard className="w-4 h-4" />;
+            case "UPI":
+                return <Smartphone className="w-4 h-4" />;
+            case "BANK":
+                return <Landmark className="w-4 h-4" />;
+            default:
+                return <CreditCard className="w-4 h-4" />;
+        }
+    };
 
-    if (!formData.amount || formData.amount <= 0) {
-      newErrors.amount = 'Amount must be greater than 0'
-    }
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
 
-    if (!formData.date) {
-      newErrors.date = 'Date is required'
-    }
+        if (!formData.amount || !formData.description) {
+            setSubmitMessage({
+                type: "error",
+                text: "Please fill in amount and description",
+            });
+            return;
+        }
 
-    if (!formData.description?.trim()) {
-      newErrors.description = 'Description is required'
-    }
+        try {
+            setIsSubmitting(true);
+            setSubmitMessage(null);
 
-    // Validate date is not in the future (optional business rule)
-    const selectedDate = new Date(formData.date)
-    const today = new Date()
-    today.setHours(23, 59, 59, 999) // End of today
-    
-    if (selectedDate > today) {
-      newErrors.date = 'Transaction date cannot be in the future'
-    }
+            const formDataToSubmit = new FormData();
+            Object.entries(formData).forEach(([key, value]) => {
+                if (key === "tags") formDataToSubmit.append(key, JSON.stringify(value));
+                else if (key === "date")
+                    formDataToSubmit.append(key, new Date(value as string).toISOString());
+                else formDataToSubmit.append(key, String(value));
+            });
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+            let result;
+            if (initialData?.id) {
+                result = await updateTransaction(initialData.id, formDataToSubmit);
+            } else {
+                result = await createTransaction(formDataToSubmit);
+            }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Clear previous errors
-    setErrors({})
-    
-    if (!validateForm()) {
-      return
-    }
+            if (result.success) {
+                setSubmitMessage({
+                    type: "success",
+                    text: initialData
+                        ? "Transaction updated successfully!"
+                        : "Transaction created successfully!",
+                });
+                router.push("/dashboard/transactions");
+            } else {
+                setSubmitMessage({
+                    type: "error",
+                    text: result.error || "Failed to save transaction",
+                });
+            }
+        } catch (error) {
+            console.error("Error submitting:", error);
+            setSubmitMessage({
+                type: "error",
+                text: "Failed to save transaction.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-    try {
-      setIsSubmitting(true)
+    const handleCancel = () => {
+        if (onCancel) {
+            onCancel();
+        } else {
+            router.push("/dashboard/transactions");
+        }
+    };
 
-      // Create FormData for server action
-      const formDataToSubmit = new FormData()
-      formDataToSubmit.append('type', formData.type)
-      formDataToSubmit.append('amount', formData.amount.toString())
-      formDataToSubmit.append('currency', formData.currency)
-      formDataToSubmit.append('date', new Date(formData.date).toISOString())
-      formDataToSubmit.append('description', formData.description || '')
-      
-      if (formData.categoryId) {
-        formDataToSubmit.append('categoryId', formData.categoryId)
-      }
-      if (formData.accountId) {
-        formDataToSubmit.append('accountId', formData.accountId)
-      }
-      if (formData.paymentMode) {
-        formDataToSubmit.append('paymentMode', formData.paymentMode)
-      }
-      if (formData.merchant) {
-        formDataToSubmit.append('merchant', formData.merchant)
-      }
-      if (formData.receiptUrl) {
-        formDataToSubmit.append('receiptUrl', formData.receiptUrl)
-      }
-      
-      formDataToSubmit.append('tags', JSON.stringify(formData.tags || []))
-      formDataToSubmit.append('isRecurring', (formData.isRecurring || false).toString())
-
-      // TODO: Handle receipt upload
-      // For now, we'll skip receipt upload functionality
-
-      let result
-      if (isEditing && initialData?.id) {
-        result = await updateTransaction(initialData.id, formDataToSubmit)
-      } else {
-        result = await createTransaction(formDataToSubmit)
-      }
-      
-      if (result.success) {
-        onSubmit(true, isEditing ? 'Transaction updated successfully!' : 'Transaction created successfully!')
-      } else {
-        onSubmit(false, result.error || `Failed to ${isEditing ? 'update' : 'create'} transaction`)
-      }
-    } catch (error) {
-      console.error('Error submitting transaction:', error)
-      onSubmit(false, error instanceof Error ? error.message : 'Failed to save transaction. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleTypeChange = (type: TransactionType) => {
-    setFormData(prev => ({ ...prev, type, categoryId: '' })) // Clear category when type changes
-  }
-
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags?.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...(prev.tags || []), newTag.trim()]
-      }))
-      setNewTag('')
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags?.filter(tag => tag !== tagToRemove) || []
-    }))
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      addTag()
-    }
-  }
-
-  if (isLoadingAccounts) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-muted-foreground">Loading form data...</span>
-      </div>
-    )
-  }
+        <div className="p-6 mb-8 rounded-2xl border backdrop-blur-sm bg-slate-900/50 border-slate-800">
+            <h3 className="flex gap-2 items-center mb-6 text-lg font-semibold text-white">
+                {initialData ? (
+                    <>
+                        <Edit3 className="w-5 h-5 text-indigo-400" />
+                        Edit Transaction
+                    </>
+                ) : (
+                    <>
+                        <Plus className="w-5 h-5 text-indigo-400" />
+                        Add Transaction
+                    </>
+                )}
+            </h3>
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* General Error Message */}
-      {errors.general && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="text-sm text-red-800">{errors.general}</div>
-        </div>
-      )}
-
-      {/* Transaction Type */}
-      <div className="space-y-3">
-        <Label className="text-base font-medium text-gray-900 dark:text-gray-100">
-          Transaction Type *
-        </Label>
-        <div className="grid grid-cols-3 gap-3">
-          {(['INCOME', 'EXPENSE', 'TRANSFER'] as TransactionType[]).map((type) => (
-            <label key={type} className="relative">
-              <input
-                type="radio"
-                name="type"
-                value={type}
-                checked={formData.type === type}
-                onChange={(e) => handleTypeChange(e.target.value as TransactionType)}
-                className="sr-only"
-              />
-              <div className={`
-                flex items-center justify-center px-4 py-3 rounded-lg border-2 cursor-pointer transition-all
-                ${formData.type === type 
-                  ? type === 'INCOME' 
-                    ? 'border-green-500 bg-green-100 text-green-800 shadow-sm' 
-                    : type === 'EXPENSE'
-                    ? 'border-red-500 bg-red-100 text-red-800 shadow-sm'
-                    : 'border-blue-500 bg-blue-100 text-blue-800 shadow-sm'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
-                }
-              `}>
-                <span className="font-medium text-sm">
-                  {type === 'INCOME' && '💰'} 
-                  {type === 'EXPENSE' && '💸'} 
-                  {type === 'TRANSFER' && '🔄'} 
-                  {' '}
-                  {type.charAt(0) + type.slice(1).toLowerCase()}
-                </span>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Amount and Currency */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 space-y-2">
-          <Label htmlFor="amount" className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <DollarSign className="h-4 w-4" />
-            Amount *
-          </Label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 text-sm">$</span>
-            </div>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.amount || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-              className={`pl-7 bg-white border-gray-300 ${errors.amount ? 'border-red-500' : ''}`}
-              placeholder="0.00"
-            />
-          </div>
-          {errors.amount && <p className="text-sm text-red-600">{errors.amount}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="currency" className="text-gray-900 dark:text-gray-100">Currency</Label>
-          <Select value={formData.currency} onValueChange={(value: string) => setFormData(prev => ({ ...prev, currency: value }))}>
-            <SelectTrigger className="bg-white border-gray-300">
-              <SelectValue placeholder="Select currency" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="USD">USD ($)</SelectItem>
-              <SelectItem value="EUR">EUR (€)</SelectItem>
-              <SelectItem value="GBP">GBP (£)</SelectItem>
-              <SelectItem value="INR">INR (₹)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Date */}
-      <div className="space-y-2">
-        <Label htmlFor="date" className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-          <Calendar className="h-4 w-4" />
-          Date *
-        </Label>
-        <Input
-          id="date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-          className={`bg-white border-gray-300 ${errors.date ? 'border-red-500' : ''}`}
-        />
-        {errors.date && <p className="text-sm text-red-600">{errors.date}</p>}
-      </div>
-
-      {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description" className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-          <FileText className="h-4 w-4" />
-          Description *
-        </Label>
-        <Input
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className={`bg-white border-gray-300 ${errors.description ? 'border-red-500' : ''}`}
-          placeholder="Enter transaction description"
-        />
-        {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
-      </div>
-
-      {/* Category and Account */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="category" className="text-gray-900 dark:text-gray-100">Category</Label>
-          <Select 
-            value={formData.categoryId} 
-            onValueChange={(value: string) => setFormData(prev => ({ ...prev, categoryId: value }))}
-            disabled={isLoadingCategories}
-          >
-            <SelectTrigger className="bg-white border-gray-300">
-              <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select category"} />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoadingCategories ? (
-                <div className="p-2 text-sm text-gray-500 flex items-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading categories...
+            {initialData && (
+                <div className="p-3 mb-4 rounded-lg border bg-indigo-500/10 border-indigo-500/20">
+                    <p className="text-sm text-indigo-300">
+                        Editing: <span className="font-medium">{initialData.description}</span> (
+                        {formatCurrency(initialData.amount)})
+                    </p>
                 </div>
-              ) : categories.length === 0 ? (
-                <div className="p-2 text-sm text-gray-500">No categories available</div>
-              ) : (
-                categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.icon} {category.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="account" className="text-gray-900 dark:text-gray-100">Account</Label>
-          <Select value={formData.accountId} onValueChange={(value: string) => setFormData(prev => ({ ...prev, accountId: value }))}>
-            <SelectTrigger className="bg-white border-gray-300">
-              <SelectValue placeholder="Select account" />
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name} ({account.type})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            )}
 
-      {/* Payment Mode and Merchant */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="paymentMode" className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <CreditCard className="h-4 w-4" />
-            Payment Mode
-          </Label>
-          <Select value={formData.paymentMode} onValueChange={(value: PaymentMode) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
-            <SelectTrigger className="bg-white border-gray-300">
-              <SelectValue placeholder="Select payment mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="CASH">💵 Cash</SelectItem>
-              <SelectItem value="CARD">💳 Card</SelectItem>
-              <SelectItem value="UPI">📱 UPI</SelectItem>
-              <SelectItem value="BANK">🏦 Bank Transfer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="merchant" className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Store className="h-4 w-4" />
-            Merchant
-          </Label>
-          <Input
-            id="merchant"
-            value={formData.merchant}
-            onChange={(e) => setFormData(prev => ({ ...prev, merchant: e.target.value }))}
-            className="bg-white border-gray-300"
-            placeholder="Store or merchant name"
-          />
-        </div>
-      </div>
+            {submitMessage && (
+                <div
+                    className={`p-4 mb-4 rounded-xl border flex items-center gap-3 ${
+                        submitMessage.type === "success"
+                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                            : "bg-red-500/10 border-red-500/20 text-red-400"
+                    }`}
+                >
+                    <span className="text-sm font-medium">{submitMessage.text}</span>
+                </div>
+            )}
 
-      {/* Tags */}
-      <div className="space-y-3">
-        <Label className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-          <Tag className="h-4 w-4" />
-          Tags
-        </Label>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {formData.tags?.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
-            >
-              {tag}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeTag(tag)}
-                className="ml-1 h-4 w-4 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-200"
-              >
-                ×
-              </Button>
-            </span>
-          ))}
+            {isLoadingAccounts && (
+                <div className="flex gap-2 items-center mb-4 text-sm text-indigo-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Syncing account data...
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Type Selector */}
+                <div className="grid grid-cols-3 gap-3">
+                    {(["INCOME", "EXPENSE", "TRANSFER"] as TransactionType[]).map((type) => (
+                        <label key={type} className="relative cursor-pointer group">
+                            <input
+                                type="radio"
+                                name="type"
+                                value={type}
+                                checked={formData.type === type}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        type: e.target.value as TransactionType,
+                                        categoryId: "",
+                                    }))
+                                }
+                                className="sr-only"
+                            />
+                            <div
+                                className={`
+                                flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200
+                                ${
+                                    formData.type === type
+                                        ? type === "INCOME"
+                                            ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]"
+                                            : type === "EXPENSE"
+                                              ? "bg-rose-500/10 border-rose-500/50 text-rose-400 shadow-[0_0_15px_-3px_rgba(244,63,94,0.2)]"
+                                              : "bg-blue-500/10 border-blue-500/50 text-blue-400 shadow-[0_0_15px_-3px_rgba(59,130,246,0.2)]"
+                                        : "bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300"
+                                }
+                            `}
+                            >
+                                {type === "INCOME" && <ArrowUpRight className="mb-1 w-5 h-5" />}
+                                {type === "EXPENSE" && <ArrowDownRight className="mb-1 w-5 h-5" />}
+                                {type === "TRANSFER" && <ArrowRightLeft className="mb-1 w-5 h-5" />}
+                                <span className="text-xs font-bold tracking-wider">{type}</span>
+                            </div>
+                        </label>
+                    ))}
+                </div>
+
+                {/* Inputs Grid */}
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    {/* Amount */}
+                    <div className="space-y-1.5">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Amount</label>
+                        <div className="relative">
+                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
+                                $
+                            </div>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={formData.amount}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        amount: e.target.value,
+                                    }))
+                                }
+                                className="block w-full pl-7 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                                placeholder="0.00"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Date */}
+                    <div className="space-y-1.5">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Date</label>
+                        <div className="relative">
+                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
+                                <Calendar className="w-4 h-4" />
+                            </div>
+                            <input
+                                type="date"
+                                value={formData.date}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        date: e.target.value,
+                                    }))
+                                }
+                                className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all [color-scheme:dark]"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-1.5 md:col-span-2">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Description</label>
+                        <input
+                            type="text"
+                            value={formData.description}
+                            onChange={(e) =>
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    description: e.target.value,
+                                }))
+                            }
+                            className="block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                            placeholder="What was this for?"
+                            required
+                        />
+                    </div>
+
+                    {/* Category */}
+                    <div className="space-y-1.5">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Category</label>
+                        <div className="relative">
+                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
+                                <Tag className="w-4 h-4" />
+                            </div>
+                            <select
+                                value={formData.categoryId}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        categoryId: e.target.value,
+                                    }))
+                                }
+                                disabled={isLoadingCategories}
+                                className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                            >
+                                <option value="" className="text-slate-500">
+                                    {isLoadingCategories ? "Loading..." : "Select Category"}
+                                </option>
+                                {categories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="flex absolute inset-y-0 right-0 items-center pr-3 pointer-events-none text-slate-500">
+                                <ChevronLeft className="w-4 h-4 -rotate-90" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Account */}
+                    <div className="space-y-1.5">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Account</label>
+                        <div className="relative">
+                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
+                                <Wallet className="w-4 h-4" />
+                            </div>
+                            <select
+                                value={formData.accountId}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        accountId: e.target.value,
+                                    }))
+                                }
+                                className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                            >
+                                <option value="">Select Account</option>
+                                {accounts.map((account) => (
+                                    <option key={account.id} value={account.id}>
+                                        {account.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="flex absolute inset-y-0 right-0 items-center pr-3 pointer-events-none text-slate-500">
+                                <ChevronLeft className="w-4 h-4 -rotate-90" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Merchant */}
+                    <div className="space-y-1.5">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Merchant (Optional)</label>
+                        <div className="relative">
+                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
+                                <Store className="w-4 h-4" />
+                            </div>
+                            <input
+                                type="text"
+                                value={formData.merchant}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        merchant: e.target.value,
+                                    }))
+                                }
+                                className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                                placeholder="e.g. Starbucks"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Payment Mode */}
+                    <div className="space-y-1.5">
+                        <label className="ml-1 text-xs font-medium text-slate-400">Payment Mode</label>
+                        <div className="relative">
+                            <div className="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none text-slate-500">
+                                {getPaymentModeIcon(formData.paymentMode)}
+                            </div>
+                            <select
+                                value={formData.paymentMode}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        paymentMode: e.target.value as PaymentMode,
+                                    }))
+                                }
+                                className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none"
+                            >
+                                <option value="CASH">Cash</option>
+                                <option value="CARD">Card</option>
+                                <option value="UPI">UPI / Digital</option>
+                                <option value="BANK">Bank Transfer</option>
+                            </select>
+                            <div className="flex absolute inset-y-0 right-0 items-center pr-3 pointer-events-none text-slate-500">
+                                <ChevronLeft className="w-4 h-4 -rotate-90" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 justify-end pt-6 border-t border-slate-800">
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting || isLoadingAccounts}
+                        className="flex gap-2 items-center px-6 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-lg transition-all hover:bg-indigo-500 shadow-indigo-500/20 disabled:opacity-50"
+                    >
+                        {isSubmitting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Check className="w-4 h-4" />
+                        )}
+                        {isSubmitting ? "Saving..." : initialData ? "Update Transaction" : "Save Transaction"}
+                    </button>
+                </div>
+            </form>
         </div>
-        <div className="flex gap-2">
-          <Input
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-white border-gray-300"
-            placeholder="Add a tag"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addTag}
-            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            Add
-          </Button>
-        </div>
-      </div>
-
-      {/* Receipt Upload */}
-      <ReceiptUpload
-        onFileSelect={setReceiptFile}
-        existingReceiptUrl={formData.receiptUrl}
-      />
-
-      {/* Recurring Transaction */}
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="recurring"
-          checked={formData.isRecurring}
-          onChange={(e) => setFormData(prev => ({ ...prev, isRecurring: e.target.checked }))}
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <Label htmlFor="recurring" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Recurring transaction
-        </Label>
-      </div>
-
-      {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={isSubmitting || externalLoading}
-          className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {(isSubmitting || externalLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {(isSubmitting || externalLoading) ? 'Saving...' : isEditing ? 'Update Transaction' : 'Save Transaction'}
-        </Button>
-      </div>
-    </form>
-  )
+    );
 }
