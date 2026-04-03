@@ -1,25 +1,8 @@
 'use server'
 
-import { cookies } from 'next/headers'
-import { verifyAccessToken } from '@/lib/auth'
+import { getUserFromToken } from '@/lib/actions/auth-helper'
 import { prisma } from '@/lib/db'
 import { serializePrismaData } from '@/lib/utils/serialization'
-
-async function getUserFromToken() {
-  const cookieStore = await cookies()
-  const accessToken = cookieStore.get('accessToken')?.value
-
-  if (!accessToken) {
-    throw new Error('No access token found')
-  }
-
-  const payload = verifyAccessToken(accessToken)
-  if (!payload) {
-    throw new Error('Invalid access token')
-  }
-
-  return payload
-}
 
 export async function getIncomeExpenseReport(
   startDate: string,

@@ -3,7 +3,6 @@ import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
 import { apiRateLimit } from '@/lib/rate-limit'
 import { TransactionService } from '@/lib/services/transaction.service'
 import { ApiResponse } from '@/types'
-import { Transaction } from '../../../../../prisma/generated/prisma/client'
 
 async function handleGET(request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -38,7 +37,7 @@ async function handleGET(request: AuthenticatedRequest, { params }: { params: Pr
       }, { status: 403 })
     }
 
-    return NextResponse.json<ApiResponse<Transaction>>({
+    return NextResponse.json<ApiResponse<typeof transaction>>({
       success: true,
       data: transaction,
       timestamp: new Date().toISOString()

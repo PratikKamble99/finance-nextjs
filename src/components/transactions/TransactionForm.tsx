@@ -35,20 +35,27 @@ export default function TransactionForm({
     loadCategories
   } = useSimpleTransactionForm()
 
-  const [formData, setFormData] = useState<CreateTransactionRequest>({
-    type: 'EXPENSE',
-    amount: 0,
-    currency: 'USD',
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    categoryId: '',
-    tags: [],
-    accountId: '',
-    paymentMode: 'CARD',
-    merchant: '',
-    receiptUrl: '',
-    isRecurring: false,
-    ...initialData
+  const [formData, setFormData] = useState<CreateTransactionRequest>(() => {
+    const defaults: CreateTransactionRequest = {
+      type: 'EXPENSE',
+      amount: 0,
+      currency: 'USD',
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      categoryId: '',
+      tags: [],
+      accountId: '',
+      paymentMode: 'CARD',
+      merchant: '',
+      receiptUrl: '',
+      isRecurring: false,
+      ...initialData
+    }
+    // Normalize date to YYYY-MM-DD for the date input (handles ISO strings from editing)
+    if (defaults.date && defaults.date.includes('T')) {
+      defaults.date = defaults.date.split('T')[0]
+    }
+    return defaults
   })
 
   const [newTag, setNewTag] = useState('')

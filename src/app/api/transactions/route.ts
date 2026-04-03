@@ -3,7 +3,6 @@ import { withAuth, AuthenticatedRequest } from '@/lib/middleware'
 import { apiRateLimit } from '@/lib/rate-limit'
 import { TransactionService } from '@/lib/services/transaction.service'
 import { CreateTransactionRequest, ApiResponse } from '@/types'
-import { Transaction } from '../../../../prisma/generated/prisma/client'
 
 async function handleGET(request: AuthenticatedRequest) {
   try {

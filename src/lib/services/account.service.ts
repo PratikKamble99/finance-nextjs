@@ -77,19 +77,21 @@ export async function deleteAccount(id: string) {
   })
 }
 
-export async function updateAccountBalance(accountId: string, amount: number, operation: 'add' | 'subtract') {
-  const account = await prisma.account.findUnique({ where: { id: accountId } })
-  if (!account) {
-    throw new Error('Account not found')
-  }
+export async function updateAccountBalance(
+  accountId: string,
+  amount: number,
+  operation: 'add' | 'subtract',
+  txClient?: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+) {
+  const db = txClient || prisma
 
-  const newBalance = operation === 'add' 
-    ? Number(account.currentBalance) + amount
-    : Number(account.currentBalance) - amount
-
-  return prisma.account.update({
+  return db.account.update({
     where: { id: accountId },
-    data: { currentBalance: newBalance }
+    data: {
+      currentBalance: operation === 'add'
+        ? { increment: amount }
+        : { decrement: amount }
+    }
   })
 }
 

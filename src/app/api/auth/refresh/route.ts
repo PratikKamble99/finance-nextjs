@@ -5,8 +5,17 @@ import { RefreshRequest, ApiResponse, AuthResponse } from '@/types'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: RefreshRequest = await request.json()
-    const { refreshToken } = body
+    // Read refresh token from httpOnly cookie first, then fall back to request body
+    let refreshToken = request.cookies.get('refreshToken')?.value
+
+    if (!refreshToken) {
+      try {
+        const body: RefreshRequest = await request.json()
+        refreshToken = body.refreshToken
+      } catch {
+        // No body provided
+      }
+    }
 
     // Validate input
     if (!refreshToken) {

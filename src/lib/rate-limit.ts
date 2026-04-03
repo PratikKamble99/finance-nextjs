@@ -15,19 +15,24 @@ interface RateLimitEntry {
 // In-memory store for rate limiting (in production, use Redis)
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
-// Clean up expired entries every 5 minutes
-setInterval(() => {
+// Clean up expired entries lazily during rate limit checks
+function cleanupExpiredEntries() {
   const now = Date.now()
   for (const [key, entry] of rateLimitStore.entries()) {
     if (now > entry.resetTime) {
       rateLimitStore.delete(key)
     }
   }
-}, 5 * 60 * 1000)
+}
 
 export function rateLimit(config: RateLimitConfig) {
   return <T extends any[]>(handler: (req: NextRequest, ...args: T) => Promise<NextResponse>) => {
     return async (request: NextRequest, ...args: T) => {
+      // Periodically clean up expired entries
+      if (rateLimitStore.size > 1000) {
+        cleanupExpiredEntries()
+      }
+
       const now = Date.now()
       const key = config.keyGenerator ? config.keyGenerator(request) : getDefaultKey(request)
       
@@ -85,11 +90,21 @@ export function rateLimit(config: RateLimitConfig) {
   }
 }
 
-function getDefaultKey(request: NextRequest): string {
-  // Use IP address as default key
+function getClientIp(request: NextRequest): string {
+  // Prefer the real IP set by trusted reverse proxies/platforms (e.g. Vercel, Cloudflare)
+  // These headers cannot be spoofed by clients when set by the platform itself.
+  const realIp = request.headers.get('x-real-ip')
+  if (realIp) return realIp.trim()
+
+  // Fall back to x-forwarded-for (less reliable, can be spoofed without a trusted proxy)
   const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded ? forwarded.split(',')[0] : 'unknown'
-  return `rate_limit:${ip}`
+  if (forwarded) return forwarded.split(',')[0].trim()
+
+  return 'unknown'
+}
+
+function getDefaultKey(request: NextRequest): string {
+  return `rate_limit:${getClientIp(request)}`
 }
 
 // Predefined rate limit configurations
@@ -97,8 +112,7 @@ export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   maxRequests: 5, // 5 attempts per 15 minutes
   keyGenerator: (request) => {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
-    return `auth_rate_limit:${ip}`
+    return `auth_rate_limit:${getClientIp(request)}`
   }
 })
 

@@ -4,27 +4,44 @@ import { prisma } from '@/lib/db'
 
 export async function calculateNetWorth(userId: string) {
   try {
-    // Get all accounts
-    const accounts = await prisma.account.findMany({
-      where: { userId, isActive: true }
-    })
+    // Get all accounts and investments in parallel
+    const [accounts, investments] = await Promise.all([
+      prisma.account.findMany({
+        where: { userId, isActive: true }
+      }),
+      prisma.investment.findMany({
+        where: { userId }
+      })
+    ])
 
-    // Calculate total balance
+    // Calculate total account balance
     const totalBalance = accounts.reduce((sum, account) => sum + Number(account.currentBalance), 0)
 
-    // For now, just return the account balance as net worth
-    // In the future, we can add investments and liabilities
+    // Calculate total investment value (use currentValue if available, otherwise totalInvested)
+    const totalInvestments = investments.reduce((sum, investment) => {
+      const value = investment.currentValue
+        ? Number(investment.currentValue)
+        : Number(investment.totalInvested)
+      return sum + value
+    }, 0)
+
+    const totalAssets = totalBalance + totalInvestments
+
     return {
-      netWorth: totalBalance,
-      totalAssets: totalBalance,
-      totalLiabilities: 0
+      netWorth: totalAssets,
+      totalAssets,
+      totalLiabilities: 0,
+      totalBalance,
+      totalInvestments
     }
   } catch (error) {
     console.error('Error calculating net worth:', error)
     return {
       netWorth: 0,
       totalAssets: 0,
-      totalLiabilities: 0
+      totalLiabilities: 0,
+      totalBalance: 0,
+      totalInvestments: 0
     }
   }
 }

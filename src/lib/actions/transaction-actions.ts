@@ -1,37 +1,15 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { verifyAccessToken } from '@/lib/auth'
-import { 
-  createTransaction as createTransactionService, 
-  updateTransaction as updateTransactionService, 
-  deleteTransaction as deleteTransactionService, 
-  getUserTransactions 
+import { getUserFromToken } from '@/lib/actions/auth-helper'
+import {
+  createTransaction as createTransactionService,
+  updateTransaction as updateTransactionService,
+  deleteTransaction as deleteTransactionService,
+  getUserTransactions
 } from '@/lib/services/transaction.service'
 import { validateInput, createTransactionSchema } from '@/lib/validations'
 import { serializeTransaction } from '@/lib/utils/serialization'
-
-async function getUserFromToken(): Promise<{ userId: string } | null> {
-  try {
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get('accessToken')?.value
-    
-    if (!accessToken) {
-      return null
-    }
-
-    const payload = verifyAccessToken(accessToken)
-    if (!payload) {
-      return null
-    }
-
-    return { userId: payload.userId }
-  } catch (error) {
-    console.error('Error verifying token:', error)
-    return null
-  }
-}
 
 export async function createTransaction(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
@@ -111,8 +89,8 @@ export async function updateTransaction(id: string, formData: FormData): Promise
       isRecurring: formData.get('isRecurring') === 'true'
     }
 
-    // Update the transaction
-    const transaction = await updateTransactionService(id, transactionData)
+    // Update the transaction (passes userId for ownership check)
+    const transaction = await updateTransactionService(id, transactionData, user.userId)
 
     // Serialize the transaction data for client components
     const serializedTransaction = serializeTransaction(transaction)
@@ -144,7 +122,7 @@ export async function deleteTransaction(id: string): Promise<{ success: boolean;
       }
     }
 
-    await deleteTransactionService(id)
+    await deleteTransactionService(id, user.userId)
 
     // Revalidate the dashboard and transactions pages
     revalidatePath('/dashboard')

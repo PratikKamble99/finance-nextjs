@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAccessToken } from '@/lib/auth'
+import { apiRateLimit } from '@/lib/rate-limit'
 import { ApiResponse } from '@/types'
 import { prisma } from '@/lib/db'
 
@@ -78,4 +79,4 @@ async function getUserHandler(request: NextRequest) {
   }
 }
 
-export const GET = getUserHandler
+export const GET = apiRateLimit(getUserHandler)

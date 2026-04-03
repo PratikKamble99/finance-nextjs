@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { TransactionType, PaymentMode, AssetType, GoalCategory, AccountType, BudgetPeriod } from '../../prisma/generated/prisma/client'
 
 // User validation schemas
 export const createUserSchema = z.object({
@@ -35,11 +34,14 @@ export const createTransactionSchema = z.object({
   type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
   amount: z.number().positive('Amount must be positive'),
   currency: z.string().length(3, 'Currency must be 3 characters'),
-  date: z.string().datetime('Invalid date format'),
+  date: z.string().refine(
+    (val) => !isNaN(Date.parse(val)),
+    'Invalid date format'
+  ),
   description: z.string().max(500, 'Description too long').optional(),
-  categoryId: z.string().optional().refine(val => !val || (val.length > 0 && val.length >= 20), 'Invalid category ID format'),
+  categoryId: z.string().min(1, 'Category ID cannot be empty').optional(),
   tags: z.array(z.string()).optional(),
-  accountId: z.string().optional().refine(val => !val || (val.length > 0 && val.length >= 20), 'Invalid account ID format'),
+  accountId: z.string().min(1, 'Account ID cannot be empty').optional(),
   paymentMode: z.enum(['CASH', 'UPI', 'CARD', 'BANK']).optional(),
   location: z.any().optional(),
   merchant: z.string().max(100, 'Merchant name too long').optional(),

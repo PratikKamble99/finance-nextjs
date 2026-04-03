@@ -33,12 +33,18 @@ export class FileUploadService {
 
     await this.ensureUploadDir()
 
-    // Generate unique filename
-    const fileExtension = path.extname(file.name)
+    // Derive a safe extension from the validated MIME type, not the user-supplied name
+    const fileExtension = this.getFileExtension(file.type)
     const timestamp = Date.now()
     const randomString = crypto.randomBytes(8).toString('hex')
     const filename = `${userId}_${timestamp}_${randomString}${fileExtension}`
     const filepath = path.join(this.UPLOAD_DIR, filename)
+
+    // Verify the resolved path is still within the upload directory
+    const resolvedPath = path.resolve(filepath)
+    if (!resolvedPath.startsWith(path.resolve(this.UPLOAD_DIR))) {
+      throw new Error('Invalid file path')
+    }
 
     // Convert File to Buffer
     const bytes = await file.arrayBuffer()
@@ -69,12 +75,18 @@ export class FileUploadService {
 
     await this.ensureUploadDir()
 
-    // Generate unique filename
-    const fileExtension = path.extname(originalName)
+    // Derive a safe extension from the validated MIME type, not the user-supplied name
+    const fileExtension = this.getFileExtension(mimeType)
     const timestamp = Date.now()
     const randomString = crypto.randomBytes(8).toString('hex')
     const filename = `${userId}_${timestamp}_${randomString}${fileExtension}`
     const filepath = path.join(this.UPLOAD_DIR, filename)
+
+    // Verify the resolved path is still within the upload directory
+    const resolvedPath = path.resolve(filepath)
+    if (!resolvedPath.startsWith(path.resolve(this.UPLOAD_DIR))) {
+      throw new Error('Invalid file path')
+    }
 
     // Write file to disk
     await writeFile(filepath, buffer)

@@ -1,11 +1,9 @@
 'use server'
 
-import { cookies } from 'next/headers'
-import { verifyAccessToken } from '@/lib/auth'
+import { getUserFromToken } from '@/lib/actions/auth-helper'
 import { getUserTransactions, getTransactionSummary } from '@/lib/services/transaction.service'
 import { getUserAccounts, getAccountSummary } from '@/lib/services/account.service'
 import { calculateNetWorth } from '@/lib/services/net-worth.service'
-// Goals service removed - using placeholder data
 import { serializeAccount, serializePrismaData } from '@/lib/utils/serialization'
 
 interface DashboardData {
@@ -45,27 +43,6 @@ interface DashboardResponse {
   error?: string
 }
 
-async function getUserFromToken(): Promise<{ userId: string } | null> {
-  try {
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get('accessToken')?.value
-    
-    if (!accessToken) {
-      return null
-    }
-
-    const payload = verifyAccessToken(accessToken)
-    if (!payload) {
-      return null
-    }
-
-    return { userId: payload.userId }
-  } catch (error) {
-    console.error('Error verifying token:', error)
-    return null
-  }
-}
-
 export async function getDashboardData(): Promise<DashboardResponse> {
   try {
     const user = await getUserFromToken()
@@ -89,38 +66,25 @@ export async function getDashboardData(): Promise<DashboardResponse> {
       goalsSummaryResult,
       recentTransactionsResult
     ] = await Promise.allSettled([
-      calculateNetWorth(user.userId).catch((error) => {
-        console.error('NetWorth calculation failed:', error)
-        return null
-      }),
-      getAccountSummary(user.userId).catch((error) => {
-        console.error('Account summary failed:', error)
-        return null
-      }),
-      getTransactionSummary(user.userId, startOfMonth, endOfMonth).catch((error) => {
-        console.error('Transaction summary failed:', error)
-        return null
-      }),
-      // Goals service removed - using placeholder data
+      calculateNetWorth(user.userId),
+      getAccountSummary(user.userId),
+      getTransactionSummary(user.userId, startOfMonth, endOfMonth),
       Promise.resolve({ totalGoals: 0, completedGoals: 0, overallProgress: 0 }),
-      getUserTransactions(user.userId, { page: 1, limit: 5 }).catch((error) => {
-        console.error('Recent transactions failed:', error)
-        return null
-      })
+      getUserTransactions(user.userId, { page: 1, limit: 5 })
     ])
 
-    // Extract data from settled promises
-    const netWorthData = netWorthResult.status === 'fulfilled' ? netWorthResult.value : null
-    const accountData = accountSummaryResult.status === 'fulfilled' ? accountSummaryResult.value : null
-    const transactionData = transactionSummaryResult.status === 'fulfilled' ? transactionSummaryResult.value : null
+    // Extract data from settled promises, logging failures
+    const netWorthData = netWorthResult.status === 'fulfilled' ? netWorthResult.value : (console.error('NetWorth calculation failed:', netWorthResult.reason), null)
+    const accountData = accountSummaryResult.status === 'fulfilled' ? accountSummaryResult.value : (console.error('Account summary failed:', accountSummaryResult.reason), null)
+    const transactionData = transactionSummaryResult.status === 'fulfilled' ? transactionSummaryResult.value : (console.error('Transaction summary failed:', transactionSummaryResult.reason), null)
     const goalsData = goalsSummaryResult.status === 'fulfilled' ? goalsSummaryResult.value : null
-    const transactionsData = recentTransactionsResult.status === 'fulfilled' ? recentTransactionsResult.value : null
+    const transactionsData = recentTransactionsResult.status === 'fulfilled' ? recentTransactionsResult.value : (console.error('Recent transactions failed:', recentTransactionsResult.reason), null)
 
     // Calculate dashboard metrics with fallbacks and proper number conversion
     const dashboardData: DashboardData = {
       netWorth: typeof netWorthData?.netWorth === 'object' ? Number(netWorthData.netWorth) : (netWorthData?.netWorth || (accountData?.totalBalance || 0)),
       totalBalance: typeof accountData?.totalBalance === 'object' ? Number(accountData.totalBalance) : (accountData?.totalBalance || 0),
-      totalInvestments: 0, // We'll implement this later
+      totalInvestments: typeof netWorthData?.totalInvestments === 'object' ? Number(netWorthData.totalInvestments) : (netWorthData?.totalInvestments || 0),
       monthlyIncome: typeof transactionData?.totalIncome === 'object' ? Number(transactionData.totalIncome) : (transactionData?.totalIncome || 0),
       monthlyExpenses: typeof transactionData?.totalExpenses === 'object' ? Number(transactionData.totalExpenses) : (transactionData?.totalExpenses || 0),
       netAmount: typeof transactionData?.netAmount === 'object' ? Number(transactionData.netAmount) : (transactionData?.netAmount || 0),

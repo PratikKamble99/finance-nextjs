@@ -16,16 +16,18 @@ if (missingEnvVars.length > 0) {
   console.error('Please check your .env file and ensure all required variables are set')
 }
 
-// Export environment variables with defaults
+// Export environment variables with defaults (secrets have no fallback in production)
+const isProduction = process.env.NODE_ENV === 'production'
+
 export const env = {
   DATABASE_URL: process.env.DATABASE_URL || '',
-  JWT_SECRET: process.env.JWT_SECRET || 'fallback-jwt-secret-change-in-production',
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-change-in-production',
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'fallback-nextauth-secret-change-in-production',
+  JWT_SECRET: process.env.JWT_SECRET || (isProduction ? '' : 'dev-only-jwt-secret-do-not-use-in-prod'),
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || (isProduction ? '' : 'dev-only-refresh-secret-do-not-use-in-prod'),
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || (isProduction ? '' : 'dev-only-nextauth-secret-do-not-use-in-prod'),
   NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-  CRON_SECRET_TOKEN: process.env.CRON_SECRET_TOKEN || 'fallback-cron-token-change-in-production',
+  CRON_SECRET_TOKEN: process.env.CRON_SECRET_TOKEN || (isProduction ? '' : 'dev-only-cron-token-do-not-use-in-prod'),
   NODE_ENV: process.env.NODE_ENV || 'development'
 }
 

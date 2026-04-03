@@ -123,7 +123,8 @@ export async function validateAuth(): Promise<boolean> {
     return false
   } catch (error) {
     console.warn('Auth validation failed:', error)
-    // Don't clear user on network errors, just return false
-    return false
+    // Return true on network errors to keep user logged in (optimistic).
+    // The user will be logged out on the next successful server response if invalid.
+    return true
   }
 }

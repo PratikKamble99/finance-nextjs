@@ -70,11 +70,11 @@ export async function getUserTransactions(
 
 export async function createTransaction(userId: string, data: any) {
   const validatedData = validateInput(createTransactionSchema, data)
-  
+
   return prisma.$transaction(async (tx) => {
     // Extract tags from validated data
     const { tags, ...transactionData } = validatedData
-    
+
     // Create transaction
     const transaction = await tx.transaction.create({
       data: {
@@ -93,14 +93,14 @@ export async function createTransaction(userId: string, data: any) {
           let tag = await tx.tag.findFirst({
             where: { userId, name: tagName }
           })
-          
+
           // Create tag if it doesn't exist
           if (!tag) {
             tag = await tx.tag.create({
               data: { userId, name: tagName }
             })
           }
-          
+
           return tag
         })
       )
@@ -123,7 +123,7 @@ export async function createTransaction(userId: string, data: any) {
     // only EXPENSE subtracts (money leaving the account).
     if (validatedData.accountId) {
       const operation = validatedData.type === 'EXPENSE' ? 'subtract' : 'add'
-      await updateAccountBalance(validatedData.accountId, validatedData.amount, operation)
+      await updateAccountBalance(validatedData.accountId, validatedData.amount, operation, tx)
     }
 
     // Return transaction with tags included
@@ -142,9 +142,9 @@ export async function createTransaction(userId: string, data: any) {
   })
 }
 
-export async function updateTransaction(id: string, data: any) {
+export async function updateTransaction(id: string, data: any, userId?: string) {
   const validatedData = validateInput(updateTransactionSchema, data)
-  
+
   return prisma.$transaction(async (tx) => {
     // Get original transaction
     const originalTransaction = await tx.transaction.findUnique({ where: { id } })
@@ -152,10 +152,15 @@ export async function updateTransaction(id: string, data: any) {
       throw new Error('Transaction not found')
     }
 
+    // Verify ownership if userId is provided
+    if (userId && originalTransaction.userId !== userId) {
+      throw new Error('Access denied')
+    }
+
     // Revert original balance change if account was linked
     if (originalTransaction.accountId) {
       const revertOperation = originalTransaction.type === 'EXPENSE' ? 'add' : 'subtract'
-      await updateAccountBalance(originalTransaction.accountId, Number(originalTransaction.amount), revertOperation)
+      await updateAccountBalance(originalTransaction.accountId, Number(originalTransaction.amount), revertOperation, tx)
     }
 
     // Extract tags from validated data
@@ -186,14 +191,14 @@ export async function updateTransaction(id: string, data: any) {
             let tag = await tx.tag.findFirst({
               where: { userId: originalTransaction.userId, name: tagName }
             })
-            
+
             // Create tag if it doesn't exist
             if (!tag) {
               tag = await tx.tag.create({
                 data: { userId: originalTransaction.userId, name: tagName }
               })
             }
-            
+
             return tag
           })
         )
@@ -215,7 +220,7 @@ export async function updateTransaction(id: string, data: any) {
     // Apply new balance change if account is linked
     if (updatedTransaction.accountId) {
       const operation = updatedTransaction.type === 'EXPENSE' ? 'subtract' : 'add'
-      await updateAccountBalance(updatedTransaction.accountId, Number(updatedTransaction.amount), operation)
+      await updateAccountBalance(updatedTransaction.accountId, Number(updatedTransaction.amount), operation, tx)
     }
 
     // Return transaction with tags included
@@ -234,17 +239,22 @@ export async function updateTransaction(id: string, data: any) {
   })
 }
 
-export async function deleteTransaction(id: string) {
+export async function deleteTransaction(id: string, userId?: string) {
   return prisma.$transaction(async (tx) => {
     const transaction = await tx.transaction.findUnique({ where: { id } })
     if (!transaction) {
       throw new Error('Transaction not found')
     }
 
+    // Verify ownership if userId is provided
+    if (userId && transaction.userId !== userId) {
+      throw new Error('Access denied')
+    }
+
     // Revert balance change if account was linked
     if (transaction.accountId) {
       const revertOperation = transaction.type === 'EXPENSE' ? 'add' : 'subtract'
-      await updateAccountBalance(transaction.accountId, Number(transaction.amount), revertOperation)
+      await updateAccountBalance(transaction.accountId, Number(transaction.amount), revertOperation, tx)
     }
 
     // Delete TransactionTag relationships first
@@ -290,8 +300,8 @@ export class TransactionService {
   static async findById(id: string) { return getTransactionById(id) }
   static async findByUserId(userId: string, options: any = {}) { return getUserTransactions(userId, options) }
   static async create(userId: string, data: any) { return createTransaction(userId, data) }
-  static async update(id: string, data: any) { return updateTransaction(id, data) }
-  static async delete(id: string) { return deleteTransaction(id) }
+  static async update(id: string, data: any, userId?: string) { return updateTransaction(id, data, userId) }
+  static async delete(id: string, userId?: string) { return deleteTransaction(id, userId) }
   static async getTransactionSummary(userId: string, startDate?: string, endDate?: string) { 
     return getTransactionSummary(userId, startDate, endDate) 
   }
